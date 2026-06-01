@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}图书查询{% endblock %}
+
+{% block content %}
+<!-- 搜索栏 -->
+<div class="search-bar">
+    <form method="GET" action="{{ url_for('student_books') }}">
+        <div class="search-box">
+            <input type="text" name="search" class="search-input"
+                   placeholder="搜索书名、作者..." value="{{ search }}">
+            <button type="submit" class="search-btn">搜索</button>
+        </div>
+    </form>
+</div>
+
+<!-- 图书表格 -->
+<div class="table-container">
+    <table class="book-table">
+        <thead>
+            <tr>
+                <th>序号</th>
+                <th>书名</th>
+                <th>作者</th>
+                <th>出版社</th>
+                <th>可借数量</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if books %}
+                {% for book in books %}
+                    <tr>
+                        <td>{{ ((page - 1) * 10 + loop.index) }}</td>  <!-- 全局序号 -->
+                        <td class="book-title">{{ book.title }}</td>
+                        <td>{{ book.author or '-' }}</td>
+                        <td>{{ book.publisher or '-' }}</td>
+                        <td>
+                            {% if book.available_count > 0 %}
+                                <span class="available">{{ book.available_count }}/{{ book.total_count }}</span>
+                            {% else %}
+                                <span class="unavailable">0/{{ book.total_count }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions">
+                            {% if book.available_count > 0 %}
+                                <a href="{{ url_for('borrow_book', book_id=book.book_id) }}"
+                                   class="btn-return"
+                                   onclick="return confirm('确认借阅《{{ book.title }}》？')">借书</a>
+                            {% else %}
+                                <span class="btn-disabled">暂不可借</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="6" class="empty-row">📚 没有找到相关图书</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页导航 -->
+{% if pages > 1 %}
+<div class="pagination">
+    <div class="pagination-inner">
+        {% if page > 1 %}
+            <a href="{{ url_for('student_books', search=search, page=page-1) }}" class="page-btn">« 上一页</a>
+        {% endif %}
+
+        <span class="page-info">第 {{ page }} / {{ pages }} 页</span>
+
+        {% if page < pages %}
+            <a href="{{ url_for('student_books', search=search, page=page+1) }}" class="page-btn">下一页 »</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 统计信息 -->
+<div class="total-info">
+    共 {{ total }} 条记录
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.search-bar {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 0.8rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.search-box {
+    display: flex;
+    gap: 1rem;
+    max-width: 40rem;
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 0.4rem;
+    font-size: 1.4rem;
+    outline: none;
+}
+
+.search-input:focus {
+    border-color: #11998e;
+}
+
+.search-btn {
+    background: #11998e;
+    color: white;
+    border: none;
+    padding: 0 1.5rem;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    font-size: 1.4rem;
+}
+
+.table-container {
+    background: white;
+    border-radius: 0.8rem;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.book-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.available {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.unavailable {
+    color: #dc3545;
+}
+
+.btn-return {
+    background: #11998e;
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: 0.4rem;
+    text-decoration: none;
+    font-size: 1.2rem;
+}
+
+.btn-disabled {
+    color: #999;
+    font-size: 1.2rem;
+}
+
+.empty-row {
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+}
+
+/* 分页样式 */
+.pagination {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.pagination-inner {
+    display: inline-flex;
+    gap: 1rem;
+    align-items: center;
+    background: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.page-btn {
+    background: #11998e;
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: 0.4rem;
+    text-decoration: none;
+    font-size: 1.3rem;
+}
+
+.page-btn:hover {
+    background: #0d7a6e;
+}
+
+.page-info {
+    color: #333;
+    font-size: 1.3rem;
+}
+
+.total-info {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 1.2rem;
+    color: #666;
+}
+</style>
+{% endblock %}

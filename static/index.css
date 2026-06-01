@@ -1,0 +1,86 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+/*基准字号*/
+html {
+    font-size: 10px;
+
+}
+
+html::before {
+    content: '';
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    z-index: -999;
+    background: linear-gradient(120deg, #f5f7fb, #e0e0e0 100%)no-repeat;
+    /*background-color: #f5f7fb;*/
+}
+
+.nav{
+    height: 60px;
+    background: #01295F;
+    box-shadow: 0 1px 2px #e0e0e0;
+}
+
+.navlist {
+    display: flex;
+    list-style: none;
+    height: 100%;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 2rem;
+}
+
+.nav-item {
+    margin: 0 1rem;
+}
+
+.nav-link {
+    color: white;
+    text-decoration: none;
+    font-size: 1.4rem;
+}
+
+.search-bar {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 0.8rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.search-box {
+    display: flex;
+    gap: 1rem;
+    max-width: 40rem;
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 0.4rem;
+    font-size: 1.4rem;
+    outline: none;
+}
+
+.search-input:focus {
+    border-color: #11998e;
+}
+
+.search-btn {
+    background: #11998e;
+    color: white;
+    border: none;
+    padding: 0 1.5rem;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    font-size: 1.4rem;
+}
+
+.search-btn:hover {
+    background: #0d7a6e;
+}

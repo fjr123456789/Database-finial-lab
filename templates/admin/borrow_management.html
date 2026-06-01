@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}借阅管理 - 管理员{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="fas fa-list text-primary me-2"></i> 借阅管理</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>借阅ID</th>
+                        <th>学生姓名</th>
+                        <th>学号</th>
+                        <th>书名</th>
+                        <th>图书编号</th>
+                        <th>借书日期</th>
+                        <th>应还日期</th>
+                        <th>归还日期</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if borrows %}
+                        {% for borrow in borrows %}
+                            <tr>
+                                <td>{{ borrow.record_id }}</td>
+                                <td>{{ borrow.student.name if borrow.student else '-' }}</td>
+                                <td>{{ borrow.student_id }}</td>
+                                <td>{{ borrow.book.title if borrow.book else '-' }}</td>
+                                <td>{{ borrow.book_id }}</td>
+                                <td>{{ borrow.borrow_date }}</td>
+                                <td>{{ borrow.due_date }}</td>
+                                <td>{{ borrow.return_date or '未归还' }}</td>
+                                <td>
+                                    {% if borrow.status == '借出' %}
+                                        <span class="badge bg-primary">借出</span>
+                                    {% elif borrow.status == '已还' %}
+                                        <span class="badge bg-success">已还</span>
+                                    {% elif borrow.status == '逾期' %}
+                                        <span class="badge bg-danger">逾期</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ borrow.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                暂无借阅记录
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

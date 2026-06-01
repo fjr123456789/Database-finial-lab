@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}图书馆管理系统{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+   <link rel="stylesheet" href="{{ url_for('static', filename='student_dashboard.css') }}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- 导航栏 -->
+    <div class="nav">
+        <ul class="navlist">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('index') }}">
+                    图书馆主页
+                </a>
+            </li>
+            {% if session.user_type == 'student' %}<li class="nav-item">
+                <span class="nav-link">
+                    学生：{{ session.user_name }}
+                </span>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('student_dashboard') }}">
+                    工作台
+                </a>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('student_books') }}">
+                    图书查询
+                </a>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('logout') }}">
+                    退出
+                </a>
+            </li>{% elif session.user_type == 'admin' %}<li class="nav-item">
+                <span class="nav-link">
+                    管理员：{{ session.admin_name }}
+                </span>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                    工作台
+                </a>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin_books') }}">
+                    图书管理
+                </a>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin_students') }}">
+                    学生管理
+                </a>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin_borrows') }}">
+                    借阅管理
+                </a>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('logout') }}">
+                    退出
+                </a>
+            </li>{% else %}<li class="nav-item">
+                <a class="nav-link" href="{{ url_for('student_login') }}">
+                    学生登录
+                </a>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin_login') }}">
+                    管理员登录
+                </a>
+            </li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('student_register') }}">
+                    学生注册
+                </a>
+            </li>{% endif %}
+        </ul>
+    </div>
+
+    <!-- 主要内容 -->
+    <main class="main-content">
+        <div class="container">
+
+            <!-- 页面内容 -->
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+</body>
+</html>

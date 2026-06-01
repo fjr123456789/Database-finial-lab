@@ -1,0 +1,122 @@
+# models.py
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+
+db = SQLAlchemy()
+
+
+class Student(db.Model):
+    __tablename__ = 'student'
+    __table_args__ = {'extend_existing': True}
+
+    student_id = db.Column(db.String(20), primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(100))
+    avatar = db.Column(db.String(255))
+    # created_at = db.Column(db.DateTime, default=datetime.now)
+
+    # 关系
+    borrow_records = db.relationship('BorrowRecord', backref='student', lazy='dynamic')
+    reservations = db.relationship('ReservationRecord', backref='student', lazy='dynamic')
+
+    def get_id(self):
+        return self.student_id
+
+    def __repr__(self):
+        return f'<Student {self.student_id}>'
+
+
+class Admin(db.Model):
+    __tablename__ = 'admin'
+    __table_args__ = {'extend_existing': True}
+
+    admin_id = db.Column(db.String(20), primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    # created_at = db.Column(db.DateTime, default=datetime.now)
+
+    def get_id(self):
+        return self.admin_id
+
+    def __repr__(self):
+        return f'<Admin {self.admin_id}>'
+
+
+class Book(db.Model):
+    __tablename__ = 'book'
+    __table_args__ = {'extend_existing': True}
+
+    book_id = db.Column(db.String(20), primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    author = db.Column(db.String(100))
+    publisher = db.Column(db.String(100))
+    total_count = db.Column(db.Integer, default=1)
+    available_count = db.Column(db.Integer, default=1)
+    cover_image = db.Column(db.String(255))
+    # description = db.Column(db.Text)
+    # location = db.Column(db.String(50))
+    # created_at = db.Column(db.DateTime, default=datetime.now)
+
+    def is_available(self):
+        return self.available_count > 0
+
+    def __repr__(self):
+        return f'<Book {self.title}>'
+
+
+class BorrowRecord(db.Model):
+    __tablename__ = 'borrow_record'
+    __table_args__ = {'extend_existing': True}
+
+    record_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'))
+    book_id = db.Column(db.String(20), db.ForeignKey('book.book_id'))
+    borrow_date = db.Column(db.Date, nullable=False)
+    due_date = db.Column(db.Date, nullable=False)
+    return_date = db.Column(db.Date)
+    status = db.Column(db.String(20), default='借出')
+    # created_at = db.Column(db.DateTime, default=datetime.now)
+
+    book = db.relationship('Book', backref='borrow_records')
+
+    def __repr__(self):
+        return f'<BorrowRecord {self.record_id}>'
+
+
+class ReservationRecord(db.Model):
+    __tablename__ = 'reservation_record'
+    __table_args__ = {'extend_existing': True}
+
+    reserve_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'))
+    book_id = db.Column(db.String(20), db.ForeignKey('book.book_id'))
+    reserve_date = db.Column(db.Date, nullable=False)
+    expire_date = db.Column(db.Date)
+    status = db.Column(db.String(20), default='等待中')
+    # created_at = db.Column(db.DateTime, default=datetime.now)
+
+    book = db.relationship('Book', backref='reservations')
+
+    def __repr__(self):
+        return f'<ReservationRecord {self.reserve_id}>'
+
+
+class OverdueRecord(db.Model):
+    __tablename__ = 'overdue_record'
+    __table_args__ = {'extend_existing': True}
+
+    overdue_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    borrow_id = db.Column(db.Integer, db.ForeignKey('borrow_record.record_id'))
+    student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'))
+    overdue_days = db.Column(db.Integer, default=0)
+    fine_amount = db.Column(db.Numeric(10, 2), default=0)
+    paid_status = db.Column(db.Boolean, default=False)
+    paid_date = db.Column(db.Date)
+    # created_at = db.Column(db.DateTime, default=datetime.now)
+
+    borrow = db.relationship('BorrowRecord', backref='overdue')
+
+    def __repr__(self):
+        return f'<OverdueRecord {self.overdue_id}>'

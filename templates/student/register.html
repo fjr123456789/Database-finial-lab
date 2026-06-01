@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}学生登录{% endblock %}
+
+{% block content %}
+    <div class="box">
+        <div class="left"></div>
+        <div class="right">
+            <h4>注册</h4>
+            <form method="POST" onsubmit="return validateForm()">
+                <input name="student_id" class="acc" type="text" placeholder="学号*" id="student_id">
+                <small class="error-msg" id="student_id_error"></small>
+                <input name="name" class="acc" type="text" placeholder="姓名*" id="name">
+                <small class="error-msg" id="name_error"></small>
+                <input name="password" class="acc" type="password" placeholder="密码*" id="password">
+                <input name="confirm_password" class="acc" type="password" placeholder="确认密码*" id="confirm_password">
+                <small class="error-msg" id="confirm_error"></small>
+                <input name="phone" class="acc" type="text" placeholder="手机号">
+                <input name="email" class="acc" type="text" placeholder="邮箱">
+
+                <input class="Login" type="submit" value="注册">
+            </form>
+            <div class="fn">
+                <a href="{{ url_for('student_login') }}">已有账号？登录</a>
+            </div>
+        </div>
+
+    </div>
+
+
+    <script>
+    function validateForm() {
+    let isValid = true;
+
+    // 学号验证（至少6位数字）
+    const studentId = document.getElementById('student_id').value;
+    if (!studentId) {
+        showError('student_id', '请输入学号');
+        isValid = false;
+    } else if (!/^\d{6,}$/.test(studentId)) {
+        showError('student_id', '学号至少6位数字');
+        isValid = false;
+    } else {
+        hideError('student_id');
+    }
+
+    // 姓名验证（至少2个字符）
+    const name = document.getElementById('name').value;
+    if (!name) {
+        showError('name', '请输入姓名');
+        isValid = false;
+    } else if (name.length < 2) {
+        showError('name', '姓名至少2个字符');
+        isValid = false;
+    } else {
+        hideError('name');
+    }
+
+    // 密码验证（至少6位）
+    const password = document.getElementById('password').value;
+    if (!password) {
+        showError('confirm', '请输入密码');
+        isValid = false;
+    } else if (password.length < 6) {
+        showError('confirm', '密码至少6位');
+        isValid = false;
+    } else {
+        hideError('confirm');
+    }
+
+    // 确认密码验证
+    const confirm = document.getElementById('confirm_password').value;
+    if (password !== confirm) {
+        showError('confirm', '两次密码不一致');
+        isValid = false;
+    }
+
+
+    return isValid;
+}
+
+function showError(fieldId, message) {
+    const errorSpan = document.getElementById(fieldId + '_error');
+    if (errorSpan) {
+        errorSpan.textContent = message;
+        errorSpan.style.visibility = 'visible';  // 改用 visibility
+    }
+}
+
+function hideError(fieldId) {
+    const errorSpan = document.getElementById(fieldId + '_error');
+    if (errorSpan) {
+        errorSpan.style.visibility = 'hidden';   // 改用 visibility
+    }
+}
+
+// 确认密码实时验证
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    if (this.value && password !== this.value) {
+        showError('confirm', '两次密码不一致');
+    } else {
+        hideError('confirm');
+    }
+});
+</script>
+
+<style>
+/* 添加一些样式让错误提示不影响布局 */
+.error-msg {
+    display: block;
+    margin-top: -3rem;
+    margin-bottom: 1rem;
+    width: 80%;
+    text-align: left;
+    padding-left: 1.6rem;
+}
+</style>
+{% endblock %}

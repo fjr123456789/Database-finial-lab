@@ -1,0 +1,107 @@
+
+.box{
+    display: flex;
+    width: 72rem;
+    height: 44rem;
+    background-color: rgba(255,255,255,60%);
+    border-radius: 1.5rem;
+    margin: 10% auto;
+    box-shadow: 0 0 1rem 0.2rem rgb(0 0 0 / 10%);
+    overflow: hidden;
+}
+
+.box .left {
+    position: relative;
+    width: 35%;
+    height: 100%;
+    /*background-color: #8ec5fc;*/
+}
+
+.box .left::before{
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image: url("doc/image/img.png");
+    background-size: cover;
+    background-position: 50% center;  /* 往右偏移，70%表示图片偏右显示 */
+    opacity: 80%;
+}
+
+.box .right{
+    display: flex;
+    width: 65%;
+    flex-direction: column;
+    align-items: center;
+    max-height: 55rem;     /* 限制最大高度 */
+    overflow-y: auto;      /* 垂直方向滚动 */
+    overflow-x: hidden;    /* 隐藏水平滚动条 */
+}
+
+.box .right h4{
+    color: #01295F;
+    font-size: 3rem;
+    margin-top: 3rem;
+}
+
+/* 给输入框的父容器设置相对定位 */
+.box .right form {
+    position: relative;
+}
+
+.box .right form .acc {
+    outline: none;
+    width: 80%;
+    height: 5rem;
+    font-size: 1.6rem;
+    margin-top: 3rem;
+    padding: 0rem 0rem 0 1.6rem;
+    border: none;
+    border-bottom: 1px solid #01295F;
+    color: #01295F;
+    background-color: #f5f7fb;
+    margin-left: 10%;  /* 向右移动父容器宽度的10% */
+    flex-shrink: 0;        /* 禁止收缩 */
+    flex-grow: 0;          /* 禁止扩张 */
+}
+
+.right form .acc:focus{
+    outline: none;
+    color: #01295F;
+    padding: 0 0 0 1.6rem;
+    width: 80%;           /* 明确宽度 */
+
+}
+
+.right .Login {
+    width: 50%;
+    height: 4rem;
+    font-size: 1.6rem;
+    margin: 3rem 0 0 50%;
+    padding: 0 0 0 1.6rem;
+    border: none;
+    color: #01295F;
+    background: linear-gradient(145deg, #667eea, #8ec5fc 100%)no-repeat;
+    border-radius: 1rem;
+    transform: translateX(-50%);
+}
+
+.right .fn a{
+    font-size: 1.6rem;
+    margin-top: 5rem;
+}
+
+.error-msg {
+    position: relative;
+    display: block;
+    margin-left: 10%;
+    margin-top: 0.5rem;
+    font-size: 1.2rem;
+    color: #ff4444;
+    display: none;
+}
+
+/* 错误信息显示时，自动出现在输入框下方 */
+.acc + .error-msg {
+    margin-top: 0.5rem;
+}

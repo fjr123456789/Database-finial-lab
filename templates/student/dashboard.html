@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}学生工作台{% endblock %}
+
+{% block content %}
+<!-- 欢迎卡片 -->
+<div class="welcome-card">
+    <h4>欢迎回来，{{ session.user_name }}！</h4>
+    <p>学号：{{ session.user_id }}</p>
+</div>
+
+<!-- 三个核心数据 -->
+<div class="stats">
+    <div class="stat-card">
+        <div class="stat-number">{{ current_borrows|length }}</div>
+        <div class="stat-label">当前借阅</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">¥{{ "%.0f"|format(total_fine) }}</div>
+        <div class="stat-label">待缴罚款</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ borrow_history|length }}</div>
+        <div class="stat-label">历史借阅</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ borrow_history|length }}</div>
+        <div class="stat-label">当前逾期数</div>
+    </div>
+</div>
+
+<div class="section">
+    <h5>当前借阅 <span>({{ current_borrows|length }} 本)</span></h5>
+
+    {% if current_borrows %}
+        <table class="book-table">
+            <thead>
+                <tr>
+                    <th>书名</th>
+                    <th>应还日期</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for borrow in current_borrows %}
+                    <tr>
+                        <td>{{ borrow.book.title }}</td>
+                        <td>{{ borrow.due_date }}</td>
+                        <td>
+                            {% if borrow.due_date < now().date() %}
+                                 <span style="color: red;">逾期</span>
+                            {% elif borrow.due_date <= now().date() + timedelta(days=3) %}
+                                <span style="color: orange;">即将到期</span>
+                            {% else %}
+                                正常
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('return_book', record_id=borrow.record_id) }}"
+                               onclick="return confirm('确认归还？')">归还</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>暂无借阅记录</p>
+    {% endif %}
+</div>
+
+<div class="section">
+    <h5>历史借阅 <span>({{ current_borrows|length }} 本)</span></h5>
+
+    {% if current_borrows %}
+        <table class="book-table">
+            <thead>
+                <tr>
+                    <th>书名</th>
+                    <th>应还日期</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for borrow in current_borrows %}
+                    <tr>
+                        <td>{{ borrow.book.title }}</td>
+                        <td>{{ borrow.due_date }}</td>
+                        <td>
+                            {% if borrow.due_date < now().date() %}
+                                 <span style="color: red;">逾期</span>
+                            {% elif borrow.due_date <= now().date() + timedelta(days=3) %}
+                                <span style="color: orange;">即将到期</span>
+                            {% else %}
+                                正常
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('return_book', record_id=borrow.record_id) }}"
+                               onclick="return confirm('确认归还？')">归还</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>暂无借阅记录</p>
+    {% endif %}
+</div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function now() {
+    return new Date();
+}
+</script>
+{% endblock %}
