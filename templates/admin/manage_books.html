@@ -3,95 +3,83 @@
 {% block title %}图书管理 - 管理员{% endblock %}
 
 {% block content %}
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white">
-        <h5 class="mb-0"><i class="fas fa-book-plus text-success me-2"></i> 添加图书</h5>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('add_book') }}" class="row g-3">
-            <div class="col-md-2">
-                <input type="text" class="form-control" name="book_id" placeholder="图书编号" required>
-            </div>
-            <div class="col-md-3">
-                <input type="text" class="form-control" name="title" placeholder="书名" required>
-            </div>
-            <div class="col-md-2">
-                <input type="text" class="form-control" name="author" placeholder="作者">
-            </div>
-            <div class="col-md-2">
-                <input type="text" class="form-control" name="publisher" placeholder="出版社">
-            </div>
-            <div class="col-md-1">
-                <input type="text" class="form-control" name="category" placeholder="分类">
-            </div>
-            <div class="col-md-1">
-                <input type="number" class="form-control" name="total_count" placeholder="数量" value="1">
-            </div>
-            <div class="col-md-1">
-                <button type="submit" class="btn btn-success w-100">
-                    <i class="fas fa-plus me-1"></i> 添加
-                </button>
-            </div>
-        </form>
-    </div>
+
+<div class="section">
+    <form method="POST" action="{{ url_for('add_book') }}">
+        <input type="text" class="search-input" name="book_id" placeholder="图书编号" required>
+
+        <input type="text" class="search-input" name="title" placeholder="书名" required>
+
+        <input type="text" class="search-input" name="author" placeholder="作者">
+
+        <input type="text" class="search-input" name="publisher" placeholder="出版社">
+
+        <input type="number" class="search-input" name="total_count" placeholder="数量" value="1">
+
+        <button type="submit" class="btn">添加</button>
+    </form>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white">
-        <h5 class="mb-0"><i class="fas fa-book text-primary me-2"></i> 图书列表</h5>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
+
+<!-- 图书表格 -->
+<div class="section">
+    <table class="book-table">
+        <thead>
+            <tr>
+                <th>序号</th>
+                <th>书名</th>
+                <th>作者</th>
+                <th>出版社</th>
+                <th>可借数量</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if books %}
+                {% for book in books %}
                     <tr>
-                        <th>图书编号</th>
-                        <th>书名</th>
-                        <th>作者</th>
-                        <th>出版社</th>
-                        <th>分类</th>
-                        <th>总数</th>
-                        <th>可借</th>
-                        <th>操作</th>
+                        <td>{{ book.book_id }}</td>  <!-- 全局序号 -->
+                        <td>{{ book.title }}</td>
+                        <td>{{ book.author or '-' }}</td>
+                        <td>{{ book.publisher or '-' }}</td>
+                        <td>
+                            {% if book.available_count > 0 %}
+                                <span class="available">{{ book.available_count }}/{{ book.total_count }}</span>
+                            {% else %}
+                                <span class="unavailable">0/{{ book.total_count }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('delete_book', book_id=book.book_id) }}" onclick="return confirm('确认删除《{{ book.title }}》？')">删除</a>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% if books %}
-                        {% for book in books %}
-                            <tr>
-                                <td>{{ book.book_id }}</td>
-                                <td>{{ book.title }}</td>
-                                <td>{{ book.author or '-' }}</td>
-                                <td>{{ book.publisher or '-' }}</td>
-                                <td>{{ book.category or '-' }}</td>
-                                <td>{{ book.total_count }}</td>
-                                <td>
-                                    {% if book.available_count > 0 %}
-                                        <span class="badge bg-success">{{ book.available_count }}</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">0</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('delete_book', book_id=book.book_id) }}" 
-                                       class="btn btn-sm btn-danger"
-                                       onclick="return confirm('确定要删除图书《{{ book.title }}》吗？')">
-                                        <i class="fas fa-trash-alt"></i> 删除
-                                    </a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                暂无图书数据
-                            </td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td>没有找到相关图书</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页导航 -->
+{% if pages > 1 %}
+<div class="pagination">
+    <div class="pagination-inner">
+        {% if page > 1 %}
+            <a href="{{ url_for('admin_books', search=search, page=(page|int) - 1) }}" class="btn">« 上一页</a>
+        {% endif %}
+
+        <span class="page-info">第 {{ page }} / {{ pages }} 页</span>
+
+        {% if page < pages %}
+              <a href="{{ url_for('admin_books', search=search, page=(page|int) + 1) }}" class="btn">下一页 »</a>
+        {% endif %}
     </div>
+</div>
+{% endif %}
+<div class="total-info">
+    共 {{ total }} 条记录
 </div>
 {% endblock %}

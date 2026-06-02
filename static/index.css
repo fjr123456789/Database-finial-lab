@@ -81,6 +81,65 @@ html::before {
     font-size: 1.4rem;
 }
 
-.search-btn:hover {
-    background: #0d7a6e;
+/*.search-btn:hover {*/
+/*    background: #0d7a6e;*/
+/*}*/
+
+
+
+
+.search-box {
+    display: flex;
+    gap: 1rem;
+    max-width: 40rem;
+}
+
+.available {
+    color: #28a745;
+}
+
+.unavailable {
+    color: #dc3545;
+}
+
+/* 分页样式 */
+.pagination {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.pagination-inner {
+    display: inline-flex;
+    margin-top: 1.5rem;
+    justify-content: center;
+    gap: 1rem;
+    align-items: center;
+    background: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.btn {
+    background: #11998e;
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: 0.4rem;
+    text-decoration: none;
+    font-size: 1.3rem;
+}
+
+.page-info {
+    color: #333;
+    font-size: 1.3rem;
+}
+
+.total-info {
+    text-align: center;
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.homepage_box{
+
 }

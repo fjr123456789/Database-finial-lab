@@ -3,82 +3,77 @@
 {% block title %}学生管理 - 管理员{% endblock %}
 
 {% block content %}
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white">
-        <h5 class="mb-0"><i class="fas fa-user-plus text-success me-2"></i> 添加学生</h5>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('add_student') }}" class="row g-3">
-            <div class="col-md-2">
-                <input type="text" class="form-control" name="student_id" placeholder="学号" required>
-            </div>
-            <div class="col-md-2">
-                <input type="text" class="form-control" name="name" placeholder="姓名" required>
-            </div>
-            <div class="col-md-2">
-                <input type="password" class="form-control" name="password" placeholder="密码" required>
-            </div>
-            <div class="col-md-2">
-                <input type="tel" class="form-control" name="phone" placeholder="手机号">
-            </div>
-            <div class="col-md-2">
-                <input type="email" class="form-control" name="email" placeholder="邮箱">
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-success w-100">
-                    <i class="fas fa-plus me-1"></i> 添加
-                </button>
-            </div>
-        </form>
-    </div>
+<!-- 添加学生表单 -->
+<div class="section">
+    <form method="POST" action="{{ url_for('add_student') }}">
+            <input type="text" class="search-input" name="student_id" placeholder="学号" required>
+            <input type="text" class="search-input" name="name" placeholder="姓名" required>
+            <input type="password" class="search-input" name="password" placeholder="密码" required>
+            <input type="tel" class="search-input" name="phone" placeholder="手机号">
+            <input type="email" class="search-input" name="email" placeholder="邮箱">
+            <button type="submit" class="btn">添加学生</button>
+    </form>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white">
-        <h5 class="mb-0"><i class="fas fa-users text-primary me-2"></i> 学生列表</h5>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
+<!-- 学生表格 -->
+<div class="section">
+    <table class="book-table">
+        <thead>
+            <tr>
+                <th>学号</th>
+                <th>姓名</th>
+                <th>手机号</th>
+                <th>邮箱</th>
+                <th>修改密码</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if students %}
+                {% for student in students %}
                     <tr>
-                        <th>学号</th>
-                        <th>姓名</th>
-                        <th>手机号</th>
-                        <th>邮箱</th>
-                        <th>注册时间</th>
-                        <th>操作</th>
+                        <td>{{ student.student_id }}</td>
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.phone or '-' }}</td>
+                        <td>{{ student.email or '-' }}</td>
+                        <td><a href="{{ url_for('delete_student', student_id=student.student_id) }}"
+                               class="btn-delete"
+                               onclick="return confirm('确定要修改学生 {{ student.name }} 吗？')">修改</a></td>
+                        <td>
+                            <a href="{{ url_for('delete_student', student_id=student.student_id) }}"
+                               class="btn-delete"
+                               onclick="return confirm('确定要删除学生 {{ student.name }} 吗？')">删除</a>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% if students %}
-                        {% for student in students %}
-                            <tr>
-                                <td>{{ student.student_id }}</td>
-                                <td>{{ student.name }}</td>
-                                <td>{{ student.phone or '-' }}</td>
-                                <td>{{ student.email or '-' }}</td>
-                                <td>{{ student.created_at.strftime('%Y-%m-%d') if student.created_at else '-' }}</td>
-                                <td>
-                                    <a href="{{ url_for('delete_student', student_id=student.student_id) }}" 
-                                       class="btn btn-sm btn-danger"
-                                       onclick="return confirm('确定要删除学生 {{ student.name }} 吗？删除后将同时删除该学生的所有借阅记录。')">
-                                        <i class="fas fa-trash-alt"></i> 删除
-                                    </a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                暂无学生数据
-                            </td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="6" class="empty-row">暂无学生数据</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页导航 -->
+{% if pages and pages|int > 1 %}
+<div class="pagination">
+    <div class="pagination-inner">
+        {% if page|int > 1 %}
+            <a href="{{ url_for('admin_students', page=page|int - 1) }}" class="btn">« 上一页</a>
+        {% endif %}
+
+        <span class="page-info">第 {{ page|default(1) }} / {{ pages }} 页</span>
+
+        {% if page|int < pages|int %}
+            <a href="{{ url_for('admin_students', page=page|int + 1) }}" class="btn">下一页 »</a>
+        {% endif %}
     </div>
+</div>
+{% endif %}
+
+<!-- 统计信息 -->
+<div class="total-info">
+    共 {{ total }} 条记录
 </div>
 {% endblock %}

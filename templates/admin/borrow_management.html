@@ -3,62 +3,90 @@
 {% block title %}借阅管理 - 管理员{% endblock %}
 
 {% block content %}
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white">
-        <h5 class="mb-0"><i class="fas fa-list text-primary me-2"></i> 借阅管理</h5>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>借阅ID</th>
-                        <th>学生姓名</th>
-                        <th>学号</th>
-                        <th>书名</th>
-                        <th>图书编号</th>
-                        <th>借书日期</th>
-                        <th>应还日期</th>
-                        <th>归还日期</th>
-                        <th>状态</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if borrows %}
-                        {% for borrow in borrows %}
-                            <tr>
-                                <td>{{ borrow.record_id }}</td>
-                                <td>{{ borrow.student.name if borrow.student else '-' }}</td>
-                                <td>{{ borrow.student_id }}</td>
-                                <td>{{ borrow.book.title if borrow.book else '-' }}</td>
-                                <td>{{ borrow.book_id }}</td>
-                                <td>{{ borrow.borrow_date }}</td>
-                                <td>{{ borrow.due_date }}</td>
-                                <td>{{ borrow.return_date or '未归还' }}</td>
-                                <td>
-                                    {% if borrow.status == '借出' %}
-                                        <span class="badge bg-primary">借出</span>
-                                    {% elif borrow.status == '已还' %}
-                                        <span class="badge bg-success">已还</span>
-                                    {% elif borrow.status == '逾期' %}
-                                        <span class="badge bg-danger">逾期</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">{{ borrow.status }}</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                暂无借阅记录
-                            </td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+<!-- 搜索栏 -->
+<div class="section">
+    <form method="GET" action="{{ url_for('admin_borrows') }}">
+        <div class="search-box">
+            <input type="text" name="search" class="search-input"
+                   placeholder="搜索学生姓名、学号或书名..." value="{{ search }}">
+            <select name="status" class="search-input">
+                <option value="">全部状态</option>
+                <option value="借阅中" {% if status == '借阅中' %}selected{% endif %}>借出</option>
+                <option value="已还" {% if status == '已还' %}selected{% endif %}>已还</option>
+                <option value="逾期" {% if status == '逾期' %}selected{% endif %}>逾期</option>
+            </select>
+            <button type="submit" class="btn">搜索</button>
         </div>
+    </form>
+</div>
+
+<!-- 借阅表格 -->
+<div class="section">
+    <table class="book-table">
+        <thead>
+            <tr>
+                <th>借阅ID</th>
+                <th>学生姓名</th>
+                <th>学号</th>
+                <th>书名</th>
+                <th>借书日期</th>
+                <th>应还日期</th>
+                <th>归还日期</th>
+                <th>状态</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if borrows %}
+                {% for borrow in borrows %}
+                    <tr class="{% if borrow.status == '逾期' %}overdue-row{% elif borrow.status == '借出' %}borrowed-row{% endif %}">
+                        <td>{{ borrow.record_id }}</td>
+                        <td>{{ borrow.student.name if borrow.student else '-' }}</td>
+                        <td>{{ borrow.student_id }}</td>
+                        <td>{{ borrow.book.title if borrow.book else '-' }}</td>
+                        <td>{{ borrow.borrow_date }}</td>
+                        <td>{{ borrow.due_date }}</td>
+                        <td>{{ borrow.return_date or '未归还' }}</td>
+                        <td>
+                            {% if borrow.status == '借出' %}
+                                <span class="status-borrowed">借出</span>
+                            {% elif borrow.status == '已还' %}
+                                <span class="status-returned">已还</span>
+                            {% elif borrow.status == '逾期' %}
+                                <span class="status-overdue">逾期</span>
+                            {% else %}
+                                <span class="status-other">{{ borrow.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8" class="empty-row">暂无借阅记录</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页导航 -->
+{% if pages and pages|int > 1 %}
+<div class="pagination">
+    <div class="pagination-inner">
+        {% if page|int > 1 %}
+            <a href="{{ url_for('admin_borrows', search=search, status=status, page=page|int - 1) }}" class="page-btn">« 上一页</a>
+        {% endif %}
+
+        <span class="page-info">第 {{ page|default(1) }} / {{ pages }} 页</span>
+
+        {% if page|int < pages|int %}
+            <a href="{{ url_for('admin_borrows', search=search, status=status, page=page|int + 1) }}" class="page-btn">下一页 »</a>
+        {% endif %}
     </div>
+</div>
+{% endif %}
+
+<!-- 统计信息 -->
+<div class="total-info">
+    共 {{ total }} 条记录
 </div>
 {% endblock %}

@@ -139,6 +139,7 @@ def student_dashboard():
 # ==================== 图书查询（分页版）====================
 @app.route('/student/books')
 def student_books():
+    # 不是学生，跳转到主页
     if session.get('user_type') != 'student':
         return redirect(url_for('index'))
 
@@ -337,8 +338,17 @@ def admin_books():
     if session.get('user_type') != 'admin':
         return redirect(url_for('index'))
 
-    books = Book.query.order_by().all()
-    return render_template('admin/manage_books.html', books=books)
+    page = request.args.get('page', 1, type=int)  # 获取当前页码，默认第1页
+    per_page = 10  # 每页显示10条
+
+    query = Book.query.order_by(Book.book_id)
+        # 分页查询
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    books = pagination.items  # 当前页的图书
+    total = pagination.total  # 总记录数
+    pages = pagination.pages  # 总页数
+
+    return render_template('admin/manage_books.html', books=books,total=total,pages=pages,page=page)
 
 
 @app.route('/admin/book/add', methods=['POST'])
@@ -351,7 +361,6 @@ def add_book():
         title=request.form['title'],
         author=request.form.get('author', ''),
         publisher=request.form.get('publisher', ''),
-        # category=request.form.get('category', ''),
         total_count=int(request.form['total_count']),
         available_count=int(request.form['total_count'])
     )
@@ -391,8 +400,16 @@ def admin_students():
     if session.get('user_type') != 'admin':
         return redirect(url_for('index'))
 
-    students = Student.query.order_by().all()
-    return render_template('admin/manage_students.html', students=students)
+    page = request.args.get('page', 1, type=int)  # 获取当前页码，默认第1页
+    per_page = 10  # 每页显示10条
+
+    query = Student.query.order_by()
+        # 分页查询
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    students = pagination.items  # 当前页的图书
+    total = pagination.total  # 总记录数
+    pages = pagination.pages  # 总页数
+    return render_template('admin/manage_students.html', students=students,total=total,pages=pages,page=page)
 
 
 @app.route('/admin/student/add', methods=['POST'])
@@ -443,8 +460,39 @@ def admin_borrows():
     if session.get('user_type') != 'admin':
         return redirect(url_for('index'))
 
-    borrows = BorrowRecord.query.order_by(BorrowRecord.borrow_date.desc()).all()
-    return render_template('admin/borrow_management.html', borrows=borrows)
+    search = request.args.get('search', '')
+    status = request.args.get('status', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    query = BorrowRecord.query
+
+    # 按 search 搜索 姓名、学号或书名
+    if search:
+        query = query.filter(
+            db.or_(
+                BorrowRecord.student.name.contains(search),
+                BorrowRecord.student_id.contains(search),
+                BorrowRecord.book.tital.contains(search),
+            )
+        )
+
+    # 按 status 筛选（可借状态）
+    if status:
+        if status == '借阅中':
+            query = query.filter(BorrowRecord.status=='借阅中')
+        elif status == '已还':
+            query = query.filter(BorrowRecord.status=='已还')
+        elif status == '逾期':
+            query = query.filter(BorrowRecord.status=='逾期')
+
+    # 分页查询
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    borrows = pagination.items  # 当前页的图书
+    total = pagination.total  # 总记录数
+    pages = pagination.pages  # 总页数
+
+    return render_template('admin/borrow_management.html', borrows=borrows, total=total, pages=pages, page=page)
 
 
 # ==================== 退出登录 ====================

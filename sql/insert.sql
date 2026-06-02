@@ -2,6 +2,20 @@
 -- 12. 插入初始数据
 -- =====================================================
 USE `finial_lab`;
+
+-- 关闭外键检查
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 清空所有表
+TRUNCATE TABLE borrow_record;
+TRUNCATE TABLE reservation_record;
+TRUNCATE TABLE overdue_record;
+TRUNCATE TABLE book;
+TRUNCATE TABLE student;
+TRUNCATE TABLE admin;
+
+-- 恢复外键检查
+SET FOREIGN_KEY_CHECKS = 1;
 -- 插入管理员
 INSERT INTO `admin` (`admin_id`, `name`, `password`) VALUES
 ('admin001', '系统管理员', '123456'),
@@ -12,7 +26,14 @@ INSERT INTO `student` (`student_id`, `name`, `password`, `phone`, `email`) VALUE
 ('2021001', '张三', '123456', '13800138001', 'zhangsan@example.com'),
 ('2021002', '李四', '123456', '13800138002', 'lisi@example.com'),
 ('2021003', '王五', '123456', '13800138003', 'wangwu@example.com'),
-('2021004', '赵六', '123456', '13800138004', 'zhaoliu@example.com');
+('2021004', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
+('2021005', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
+('2021006', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
+('2021007', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
+('2021008', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
+('2021009', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
+('20210100', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
+('20210011', '赵六', '123456', '13800138004', 'zhaoliu@example.com');
 
 -- 插入图书
 INSERT INTO `book` (`book_id`, `title`, `author`, `publisher`, `total_count`, `available_count`) VALUES
@@ -22,7 +43,11 @@ INSERT INTO `book` (`book_id`, `title`, `author`, `publisher`, `total_count`, `a
 ('B004', '深入理解计算机系统', 'Randal E. Bryant', '机械工业出版社', 2, 2),
 ('B005', '算法导论', 'Thomas H. Cormen', '机械工业出版社', 1, 1),
 ('B006', 'Java编程思想', 'Bruce Eckel', '机械工业出版社', 2, 2),
-('B007', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2);
+('B007', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2),
+('B008', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2),
+('B009', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2),
+('B010', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2),
+('B011', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2);
 
 -- 插入借阅记录示例（包含正常借阅和逾期借阅）
 -- 当前借阅（未逾期）

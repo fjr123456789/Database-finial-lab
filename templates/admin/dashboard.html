@@ -1,70 +1,108 @@
 {% extends "base.html" %}
 
-{% block title %}管理员仪表盘{% endblock %}
+{% block title %}管理员工作台{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm bg-warning">
-            <div class="card-body">
-                <h4><i class="fas fa-user-shield me-2"></i> 欢迎，{{ session.admin_name }}！</h4>
-                <p class="mb-0">管理员面板 - 系统总览</p>
-            </div>
-        </div>
+<div class="welcome-card">
+    <h4>欢迎回来，管理员！</h4>
+</div>
+
+<div class="stats">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_books }}</div>
+        <div class="stat-label">总藏书</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">¥{{ total_students }}</div>
+        <div class="stat-label">注册学生</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ active_borrows }}</div>
+        <div class="stat-label">当前借阅</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ overdue_count }}</div>
+        <div class="stat-label">逾期未还</div>
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-md-3">
-        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            <i class="fas fa-book fa-2x mb-2"></i>
-            <div class="stat-number">{{ total_books }}</div>
-            <div class="stat-label">总藏书</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
-            <i class="fas fa-users fa-2x mb-2"></i>
-            <div class="stat-number">{{ total_students }}</div>
-            <div class="stat-label">注册学生</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-            <i class="fas fa-hand-holding-heart fa-2x mb-2"></i>
-            <div class="stat-number">{{ active_borrows }}</div>
-            <div class="stat-label">当前借阅</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-            <div class="stat-number">{{ overdue_count }}</div>
-            <div class="stat-label">逾期未还</div>
-        </div>
-    </div>
+<div class="section">
+    <h5>当前借阅 <span>({{ active_borrows }} 本)</span></h5>
+
+    {% if current_borrows %}
+        <table class="book-table">
+            <thead>
+                <tr>
+                    <th>书名</th>
+                    <th>应还日期</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for borrow in current_borrows %}
+                    <tr>
+                        <td>{{ borrow.book.title }}</td>
+                        <td>{{ borrow.due_date }}</td>
+                        <td>
+                            {% if borrow.due_date < now().date() %}
+                                 <span style="color: red;">逾期</span>
+                            {% elif borrow.due_date <= now().date() + timedelta(days=3) %}
+                                <span style="color: orange;">即将到期</span>
+                            {% else %}
+                                正常
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('return_book', record_id=borrow.record_id) }}"
+                               onclick="return confirm('确认归还？')">归还</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>暂无借阅记录</p>
+    {% endif %}
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-chart-line text-info me-2"></i> 最近借阅</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted text-center py-3">点击上方菜单查看更多功能</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="fas fa-bell text-warning me-2"></i> 系统通知</h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted text-center py-3">欢迎使用图书馆管理系统</p>
-            </div>
-        </div>
-    </div>
+<div class="section">
+    <h5>当前逾期 <span>({{ active_borrows }} 本)</span></h5>
+
+    {% if current_borrows %}
+        <table class="book-table">
+            <thead>
+                <tr>
+                    <th>书名</th>
+                    <th>应还日期</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for borrow in current_borrows %}
+                    <tr>
+                        <td>{{ borrow.book.title }}</td>
+                        <td>{{ borrow.due_date }}</td>
+                        <td>
+                            {% if borrow.due_date < now().date() %}
+                                 <span style="color: red;">逾期</span>
+                            {% elif borrow.due_date <= now().date() + timedelta(days=3) %}
+                                <span style="color: orange;">即将到期</span>
+                            {% else %}
+                                正常
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('return_book', record_id=borrow.record_id) }}"
+                               onclick="return confirm('确认归还？')">归还</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>暂无借阅记录</p>
+    {% endif %}
 </div>
 {% endblock %}

@@ -9,7 +9,7 @@
     <p>学号：{{ session.user_id }}</p>
 </div>
 
-<!-- 三个核心数据 -->
+<!-- 四个核心数据 -->
 <div class="stats">
     <div class="stat-card">
         <div class="stat-number">{{ current_borrows|length }}</div>
@@ -70,7 +70,7 @@
 </div>
 
 <div class="section">
-    <h5>历史借阅 <span>({{ current_borrows|length }} 本)</span></h5>
+    <h5>预约记录 <span>({{ current_borrows|length }} 本)</span></h5>
 
     {% if current_borrows %}
         <table class="book-table">
@@ -109,6 +109,45 @@
     {% endif %}
 </div>
 
+<div class="section">
+    <h5>历史借阅 <span>({{ active_borrows }} 本)</span></h5>
+
+    {% if current_borrows %}
+        <table class="book-table">
+            <thead>
+                <tr>
+                    <th>书名</th>
+                    <th>应还日期</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for borrow in current_borrows %}
+                    <tr>
+                        <td>{{ borrow.book.title }}</td>
+                        <td>{{ borrow.due_date }}</td>
+                        <td>
+                            {% if borrow.due_date < now().date() %}
+                                 <span style="color: red;">逾期</span>
+                            {% elif borrow.due_date <= now().date() + timedelta(days=3) %}
+                                <span style="color: orange;">即将到期</span>
+                            {% else %}
+                                正常
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('return_book', record_id=borrow.record_id) }}"
+                               onclick="return confirm('确认归还？')">归还</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>暂无借阅记录</p>
+    {% endif %}
+</div>
 
 {% endblock %}
 
