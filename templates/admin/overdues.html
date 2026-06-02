@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}罚款管理 - 管理员{% endblock %}
+
+{% block content %}
+
+<!-- 统计卡片 -->
+<div class="stats-section">
+    <div class="stat-card">
+        <div class="stat-number">¥{{ "%.2f"|format(total_unpaid) }}</div>
+        <div class="stat-label">待缴罚款总额</div>
+    </div>
+</div>
+
+<!-- 筛选栏 -->
+<div class="section">
+    <form method="GET" action="{{ url_for('admin_overdues') }}">
+        <div class="search-box">
+            <select name="paid_status" class="status-select">
+                <option value="">全部</option>
+                <option value="unpaid" {% if paid_status == 'unpaid' %}selected{% endif %}>未缴纳</option>
+                <option value="paid" {% if paid_status == 'paid' %}selected{% endif %}>已缴纳</option>
+            </select>
+            <button type="submit" class="btn">筛选</button>
+        </div>
+    </form>
+</div>
+
+<!-- 罚款表格 -->
+<div class="section">
+    <table class="book-table">
+        <thead>
+            <tr>
+                <th>逾期ID</th>
+                <th>学生姓名</th>
+                <th>学号</th>
+                <th>书名</th>
+                <th>逾期天数</th>
+                <th>罚款金额</th>
+                <th>归还期限</th>
+                <th>缴纳状态</th>
+                <th>缴纳日期</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if overdues %}
+                {% for overdue in overdues %}
+                    <tr>
+                        <td>{{ overdue.overdue_id }}</td>
+                        <td>{{ overdue.student_name if overdue.student_name else '-' }}</td>
+                        <td>{{ overdue.student_id }}</td>
+                        <td>{{ overdue.book_title if overdue.book_title else '-' }}</td>
+                        <td>{{ overdue.overdue_days }}天</td>
+                        <td>¥{{ "%.2f"|format(overdue.fine_amount) }}</td>
+                        <td>{{ overdue.due_date if overdue.due_date else '-' }}</td>
+                        <td>
+                            {% if overdue.paid_status %}
+                                <span>已缴纳</span>
+                            {% else %}
+                                <span>未缴纳</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ overdue.paid_date or '-' }}</td>
+                        <td class="actions">
+                            {% if not overdue.paid_status %}
+                                <a href="{{ url_for('mark_paid', overdue_id=overdue.overdue_id) }}"
+                                   onclick="return confirm('确认标记学生 {{ overdue.student.name if overdue.student else '' }} 的罚款 ¥{{ "%.2f"|format(overdue.fine_amount) }} 为已缴纳？')">
+                                    标记已缴
+                                </a>
+                            {% else %}
+                                <span>已完成</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="10" class="empty-row">暂无罚款记录</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页导航 -->
+{% if pages and pages|int > 1 %}
+<div class="pagination">
+    <div class="pagination-inner">
+        {% if page|int > 1 %}
+            <a href="{{ url_for('admin_overdues', paid_status=paid_status, page=page|int - 1) }}" class="btn">« 上一页</a>
+        {% endif %}
+
+        <span class="page-info">第 {{ page|default(1) }} / {{ pages }} 页</span>
+
+        {% if page|int < pages|int %}
+            <a href="{{ url_for('admin_overdues', paid_status=paid_status, page=page|int + 1) }}" class="btn">下一页 »</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 统计信息 -->
+<div class="total-info">
+    共 {{ total }} 条记录
+</div>
+{% endblock %}

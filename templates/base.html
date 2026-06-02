@@ -55,6 +55,14 @@
                 <a class="nav-link" href="{{ url_for('admin_borrows') }}">
                     借阅管理
                 </a>
+            </li></li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin_reservations') }}">
+                    预约管理
+                </a>
+            </li></li><li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin_overdues') }}">
+                    逾期管理
+                </a>
             </li><li class="nav-item">
                 <a class="nav-link" href="{{ url_for('logout') }}">
                     退出
@@ -76,13 +84,17 @@
     </div>
 
     <!-- 主要内容 -->
-    <main class="main-content">
-        <div class="container">
 
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
             <!-- 页面内容 -->
-            {% block content %}{% endblock %}
-        </div>
-    </main>
+    {% block content %}{% endblock %}
+
 
 </body>
 </html>

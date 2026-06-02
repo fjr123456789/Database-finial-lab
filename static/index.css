@@ -121,8 +121,8 @@ html::before {
 }
 
 .btn {
-    background: #11998e;
-    color: white;
+    background: #3498a2;
+    color: #e4e5ef;
     padding: 0.4rem 1rem;
     border-radius: 0.4rem;
     text-decoration: none;
@@ -138,6 +138,33 @@ html::before {
     text-align: center;
     font-size: 1.2rem;
     color: #666;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    font-size: 1.3rem;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    font-size: 1.3rem;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    font-size: 1.3rem;
 }
 
 .homepage_box{

@@ -1,23 +1,51 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from flask_sqlalchemy import SQLAlchemy
 import config
-from sqlalchemy import text, MetaData, create_engine
+from flask_apscheduler import APScheduler  # 新增
+from sqlalchemy import text, MetaData, create_engine, func
 from sqlalchemy.orm import DeclarativeBase
-from models import db, Student, Admin, Book, BorrowRecord, ReservationRecord, OverdueRecord
+from models import db, Student, Admin, Book, BorrowRecord, ReservationRecord, OverdueRecordView, OverdueRecord
 
 app = Flask(__name__)
 # 连接配置
 app.config.from_object(config)
 
+# 定时任务配置
+scheduler = APScheduler()
 # 初始化数据库
 db.init_app(app)
 
+# 定时任务函数
+def daily_overdue_check():
+    """每天执行存储过程生成逾期记录"""
+    with app.app_context():
+        try:
+            # 调用存储过程
+            db.session.execute(text("CALL GenerateDailyOverdue()"))
+            db.session.commit()
+            print(f"[{datetime.now()}] 逾期记录已更新")
+        except Exception as e:
+            db.session.rollback()
+            print(f"[{datetime.now()}] 更新逾期记录失败：{str(e)}")
 
+# 配置定时任务（每天凌晨0点执行）
+scheduler.add_job(
+    id='daily_overdue_check',
+    func=daily_overdue_check,
+    trigger='cron',
+    hour=0,
+    minute=0
+)
+
+# 启动定时任务
+scheduler.init_app(app)
+scheduler.start()
+
+# 注入模板变量
 @app.context_processor
 def inject_now():
-    """将 now 函数注入到所有模板中"""
-    return {'now': datetime.now}  # 注意：是 datetime.now，不是 datetime
+    return {'now': datetime.now, 'timedelta': timedelta, 'date': date}
 
 # 创建跟路由，http://127.0.0.0:5000
 @app.route('/')
@@ -92,48 +120,95 @@ def student_login():
     return render_template('student/login.html')
 
 
-# ==================== 学生仪表盘（ORM方式）====================
+# ==================== 学生工作台（ORM方式）====================
+
 @app.route('/student/dashboard')
 def student_dashboard():
     if session.get('user_type') != 'student':
         return redirect(url_for('index'))
 
+    # 更新逾期表
+    db.session.execute(text("CALL GenerateDailyOverdue()"))
+    db.session.commit()
+
     student_id = session['user_id']
+    today = date.today()
 
     # 当前借阅
-    current_borrows = BorrowRecord.query.filter_by(
-        student_id=student_id, status='借阅中'
+    current_borrows = BorrowRecord.query.filter(
+        BorrowRecord.student_id == student_id,
+        BorrowRecord.return_date.is_(None)
     ).all()
 
-    # 借阅历史
-    borrow_history = BorrowRecord.query.filter(
-        BorrowRecord.student_id == student_id,
-        BorrowRecord.status.in_(['已还', '逾期'])
-    ).order_by(BorrowRecord.borrow_date.desc()).limit(10).all()
 
-    # 预定记录
+    # 当前逾期（未归还且超过应还日期）
+    overdue_borrows = []
+    for borrow in current_borrows:
+        if borrow.borrow_date + timedelta(days=30) < today:
+            # 添加逾期天数属性
+            borrow.overdue_days = (today - (borrow.borrow_date + timedelta(days=30))).days
+            overdue_borrows.append(borrow)
+
+
+    # 历史借阅
+    borrow_history = BorrowRecord.query.filter(
+        BorrowRecord.student_id == student_id
+    ).order_by(BorrowRecord.borrow_date.desc()).all()
+
+    # 最近十条预约记录
     reservations = ReservationRecord.query.filter_by(
         student_id=student_id, status='等待中'
+    ).order_by(ReservationRecord.reserve_id.desc()).limit(10).all()
+
+    overdues = OverdueRecordView.query.filter(
+        OverdueRecordView.student_id == student_id
     ).all()
 
-    # 调用存储过程或函数获取总罚款
-    # 方式1：使用SQLAlchemy执行原生SQL调用函数
-    from sqlalchemy import text
+    # 总罚款
     result = db.session.execute(
-        text(
-            "SELECT IFNULL(SUM(fine_amount), 0) AS total_fine FROM overdue_record WHERE student_id = :sid AND paid_status = FALSE"),
+        text("SELECT IFNULL(SUM(fine_amount), 0) FROM overdue_record_view WHERE student_id = :sid AND paid_status = FALSE"),
         {'sid': student_id}
     ).fetchone()
-    total_fine = float(result[0]) if result else 0
     total_fine = float(result[0]) if result else 0
 
     return render_template('student/dashboard.html',
                            current_borrows=current_borrows,
                            borrow_history=borrow_history,
                            reservations=reservations,
+                           overdue_borrows=overdue_borrows,
                            total_fine=total_fine,
-                           timedelta=timedelta)  # ✅ 添加这一行)
+                           overdue_count=len(overdues),
+                           timedelta=timedelta)
 
+
+# 学生取消预约
+@app.route('/student/cancel_reservation/<int:reserve_id>')
+def cancel_reservation(reserve_id):
+    if session.get('user_type') != 'student':
+        return redirect(url_for('index'))
+
+    reservation = ReservationRecord.query.get(reserve_id)
+    if not reservation:
+        flash('预约记录不存在', 'danger')
+        return redirect(url_for('student_dashboard'))
+
+    if reservation.student_id != session['user_id']:
+        flash('无权限操作', 'danger')
+        return redirect(url_for('student_dashboard'))
+
+    if reservation.status != '等待中':
+        flash('该预约已无法取消', 'warning')
+        return redirect(url_for('student_dashboard'))
+
+    try:
+        reservation.status = '已取消'
+        db.session.commit()
+        flash(f'已取消《{reservation.book.title}》的预约', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'取消失败：{str(e)}', 'danger')
+
+    return redirect(url_for('student_dashboard'))
 
 # ==================== 图书查询（ORM方式）====================
 # ==================== 图书查询（分页版）====================
@@ -175,9 +250,12 @@ def borrow_book(book_id):
     if session.get('user_type') != 'student':
         return redirect(url_for('index'))
 
-    student_id = session['user_id']
+    # 获取来源页面参数，用于结束时重定向
+    next_page = request.args.get('next', 'student_books')
 
-    # 开启事务
+    student_id = session['user_id']
+    today = date.today()
+
     try:
         # 检查图书
         book = Book.query.get(book_id)
@@ -185,46 +263,61 @@ def borrow_book(book_id):
             flash('该书已借完', 'warning')
             return redirect(url_for('student_books'))
 
-        # 检查逾期未还
-        overdue_borrow = BorrowRecord.query.filter(
+        # 检查逾期未还（通过 borrow_date + 30 计算）
+        all_borrows = BorrowRecord.query.filter(
             BorrowRecord.student_id == student_id,
-            BorrowRecord.status == '借阅中',
-            BorrowRecord.due_date < datetime.now().date()
-        ).first()
+            BorrowRecord.return_date.is_(None)
+        ).all()
 
-        if overdue_borrow:
+        overdue_exists = False
+        for borrow in all_borrows:
+            if borrow.borrow_date + timedelta(days=30) < today:
+                overdue_exists = True
+                break
+
+        if overdue_exists:
             flash('请先还清逾期图书', 'danger')
             return redirect(url_for('student_dashboard'))
 
         # 检查借阅数量（最多5本）
-        borrow_count = BorrowRecord.query.filter_by(
-            student_id=student_id, status='借阅中'
+        borrow_count = BorrowRecord.query.filter(
+            BorrowRecord.student_id == student_id,
+            BorrowRecord.return_date.is_(None)
         ).count()
 
         if borrow_count >= 5:
             flash('借书数量已达上限（5本）', 'warning')
             return redirect(url_for('student_books'))
 
-        # 创建借阅记录（触发器会自动更新available_count）
+        # 创建借阅记录
         new_borrow = BorrowRecord(
             student_id=student_id,
             book_id=book_id,
-            borrow_date=datetime.now().date(),
-            due_date=datetime.now().date() + timedelta(days=30),
-            status='借阅中'
+            borrow_date=today,
+            return_date=None
         )
-
         db.session.add(new_borrow)
+
+        # 自动处理预约
+        reservation = ReservationRecord.query.filter(
+            ReservationRecord.student_id == student_id,
+            ReservationRecord.book_id == book_id,
+            ReservationRecord.status == '等待中'
+        ).first()
+
+        if reservation:
+            reservation.status = '已取书'
+            flash(f'成功借阅《{book.title}》（已自动确认预约）', 'success')
+        else:
+            flash(f'成功借阅《{book.title}》', 'success')
+
         db.session.commit()
-
-        flash(f'成功借阅《{book.title}》', 'success')
-
+        
     except Exception as e:
         db.session.rollback()
         flash(f'借书失败：{str(e)}', 'danger')
 
-    return redirect(url_for('student_books'))
-
+    return redirect(url_for(next_page))
 
 # ==================== 还书（调用存储过程）====================
 @app.route('/student/return/<int:record_id>')
@@ -232,22 +325,38 @@ def return_book(record_id):
     if session.get('user_type') != 'student':
         return redirect(url_for('index'))
 
-    from sqlalchemy import text
-
     try:
+        # 获取原生数据库连接
+        connection = db.engine.raw_connection()
+        cursor = connection.cursor()
+
         # 调用存储过程
-        db.session.execute(
-            text("CALL ReturnBook(:record_id, :return_date)"),
-            {'record_id': record_id, 'return_date': datetime.now().date()}
-        )
-        db.session.commit()
-        flash('还书成功！', 'success')
+        cursor.callproc('ReturnBook', (record_id, 0, ''))
+
+        # 获取 OUT 参数（第2和第3个参数）
+        cursor.execute('SELECT @_ReturnBook_1, @_ReturnBook_2')
+        result = cursor.fetchone()
+
+        if result:
+            p_state = result[0]
+            p_message = result[1]
+        else:
+            p_state = 3
+            p_message = '未知错误'
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        if p_state == 0:
+            flash(p_message, 'success')
+        else:
+            flash(f'还书失败：{p_message}', 'danger')
+
     except Exception as e:
-        db.session.rollback()
         flash(f'还书失败：{str(e)}', 'danger')
 
     return redirect(url_for('student_dashboard'))
-
 
 # ==================== 预定图书（ORM方式）====================
 @app.route('/student/reserve/<book_id>')
@@ -286,6 +395,54 @@ def reserve_book(book_id):
     flash(f'成功预定《{book.title}》，请在7天内来馆取书', 'success')
     return redirect(url_for('student_books'))
 
+# 历史借阅
+@app.route('/student/borrow_history')
+def student_borrow_history():
+    if session.get('user_type') != 'student':
+        return redirect(url_for('index'))
+
+    student_id = session['user_id']
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+
+    # 已归还的借阅记录
+    query = BorrowRecord.query.filter(
+        BorrowRecord.student_id == student_id
+    ).order_by(BorrowRecord.borrow_date.desc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return render_template('student/borrow_history.html',
+                           borrows=pagination.items,
+                           page=pagination.page,
+                           pages=pagination.pages,
+                           total=pagination.total,
+                           timedelta=timedelta)
+
+# 历史逾期
+@app.route('/student/overdue_history')
+def student_overdue_history():
+    if session.get('user_type') != 'student':
+        return redirect(url_for('index'))
+
+    student_id = session['user_id']
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    # 逾期记录（通过 overdue_record 表关联）
+    query = OverdueRecordView.query.filter(
+        OverdueRecordView.student_id == student_id
+    ).order_by(OverdueRecordView.overdue_id.desc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return render_template('student/overdue_history.html',
+                           overdues=pagination.items,
+                           page=pagination.page,
+                           pages=pagination.pages,
+                           total=pagination.total,
+                           timedelta=timedelta)
+
 
 # ==================== 管理员登录 ====================
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -309,6 +466,10 @@ def admin_login():
 
 
 # ==================== 管理员仪表盘 ====================
+from datetime import date
+from sqlalchemy import text
+
+
 @app.route('/admin/dashboard')
 def admin_dashboard():
     if session.get('user_type') != 'admin':
@@ -316,12 +477,22 @@ def admin_dashboard():
 
     total_books = Book.query.count()
     total_students = Student.query.count()
-    active_borrows = BorrowRecord.query.filter_by(status='借阅中').count()
 
-    # 计算逾期数量
-    from sqlalchemy import text
+    # 当前借阅：return_date 为空的记录
+    active_borrows = BorrowRecord.query.filter(
+        BorrowRecord.return_date.is_(None)
+    ).count()
+
+    # 逾期数量：使用原生 SQL
+    today = date.today()
     result = db.session.execute(
-        text("SELECT COUNT(*) FROM borrow_record WHERE status = '借阅中' AND due_date < CURDATE()")
+        text("""
+             SELECT COUNT(*)
+             FROM borrow_record
+             WHERE return_date IS NULL
+               AND DATE_ADD(borrow_date, INTERVAL 30 DAY) < :today
+             """),
+        {'today': today}
     ).fetchone()
     overdue_count = result[0] if result else 0
 
@@ -449,10 +620,48 @@ def delete_student(student_id):
             flash('学生已删除', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f'删除失败：{str(e)}', 'danger')
+            flash(f'删除失败：', 'danger')
 
     return redirect(url_for('admin_students'))
 
+
+# ==================== 学生信息修改 ====================
+@app.route('/admin/student/edit/<student_id>', methods=['GET', 'POST'])
+def edit_student(student_id):
+    if session.get('user_type') != 'admin':
+        return redirect(url_for('index'))
+
+    student = Student.query.get(student_id)
+    if not student:
+        flash('学生不存在', 'danger')
+        return redirect(url_for('admin_students'))
+
+    if request.method == 'POST':
+        # 获取表单数据（学号不可修改，所以不处理）
+        name = request.form.get('name')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # 更新信息
+        if name:
+            student.name = name
+        if phone:
+            student.phone = phone
+        if email:
+            student.email = email
+        if password:
+            student.password = password  # 实际应用中应该加密
+
+        try:
+            db.session.commit()
+            flash(f'学生 {student.name} 信息修改成功', 'success')
+            return redirect(url_for('admin_students'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'修改失败：{str(e)}', 'danger')
+
+    return render_template('admin/edit_student.html', student=student)
 
 # ==================== 借阅管理 ====================
 @app.route('/admin/borrows')
@@ -461,38 +670,151 @@ def admin_borrows():
         return redirect(url_for('index'))
 
     search = request.args.get('search', '')
-    status = request.args.get('status', '')
+    status_filter = request.args.get('status', '')
     page = request.args.get('page', 1, type=int)
     per_page = 10
 
     query = BorrowRecord.query
 
-    # 按 search 搜索 姓名、学号或书名
     if search:
         query = query.filter(
             db.or_(
-                BorrowRecord.student.name.contains(search),
+                BorrowRecord.student.has(Student.name.contains(search)),
                 BorrowRecord.student_id.contains(search),
-                BorrowRecord.book.tital.contains(search),
+                BorrowRecord.book.has(Book.title.contains(search))
             )
         )
 
-    # 按 status 筛选（可借状态）
-    if status:
-        if status == '借阅中':
-            query = query.filter(BorrowRecord.status=='借阅中')
-        elif status == '已还':
-            query = query.filter(BorrowRecord.status=='已还')
-        elif status == '逾期':
-            query = query.filter(BorrowRecord.status=='逾期')
+    # 按状态筛选（使用 return_date 判断）
+    if status_filter:
+        if status_filter == '借阅中':
+            query = query.filter(BorrowRecord.return_date.is_(None))
+        elif status_filter == '已还':
+            query = query.filter(BorrowRecord.return_date.is_not(None))
+        elif status_filter == '逾期':
+            # 逾期：未归还 且 borrow_date + 30 < 今天
+            query = query.filter(
+                BorrowRecord.return_date.is_(None),
+                BorrowRecord.borrow_date + timedelta(days=30) < date.today()
+            )
 
-    # 分页查询
+    pagination = query.order_by(BorrowRecord.borrow_date.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    return render_template('admin/borrow_management.html',
+                           borrows=pagination.items,
+                           total=pagination.total,
+                           pages=pagination.pages,
+                           page=page)
+
+# 管理员查看所有预约
+@app.route('/admin/reservations')
+def admin_reservations():
+    if session.get('user_type') != 'admin':
+        return redirect(url_for('index'))
+
+    status_filter = request.args.get('status', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    query = ReservationRecord.query
+    if status_filter:
+        query = query.filter(ReservationRecord.status == status_filter)
+
+    query = query.order_by(ReservationRecord.reserve_date.desc())
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    borrows = pagination.items  # 当前页的图书
-    total = pagination.total  # 总记录数
-    pages = pagination.pages  # 总页数
 
-    return render_template('admin/borrow_management.html', borrows=borrows, total=total, pages=pages, page=page)
+    return render_template('admin/reservations.html',
+                           reservations=pagination.items,
+                           status=status_filter,
+                           page=pagination.page,
+                           pages=pagination.pages,
+                           total=pagination.total)
+
+
+# 删除预约记录（彻底删除）
+@app.route('/admin/delete_reservation/<int:reserve_id>')
+def delete_reservation(reserve_id):
+    if session.get('user_type') != 'admin':
+        return redirect(url_for('index'))
+
+    reservation = ReservationRecord.query.get(reserve_id)
+    if not reservation:
+        flash('预约记录不存在', 'danger')
+        return redirect(url_for('admin_reservations'))
+
+    try:
+        db.session.delete(reservation)
+        db.session.commit()
+        flash(
+            f'已删除预约记录）',
+            'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'删除失败：{str(e)}', 'danger')
+
+    return redirect(url_for('admin_reservations'))
+
+
+# 管理员查看所有逾期罚款
+@app.route('/admin/overdues')
+def admin_overdues():
+    if session.get('user_type') != 'admin':
+        return redirect(url_for('index'))
+
+    paid_status = request.args.get('paid_status', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    query = OverdueRecordView.query
+    if paid_status == 'unpaid':
+        query = query.filter(OverdueRecordView.paid_status == False)
+    elif paid_status == 'paid':
+        query = query.filter(OverdueRecordView.paid_status == True)
+
+    query = query.order_by(OverdueRecordView.overdue_id.desc())
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # 统计未缴罚款总额
+    total_unpaid = db.session.query(db.func.sum(OverdueRecordView.fine_amount)).filter(
+        OverdueRecordView.paid_status == False
+    ).scalar() or 0
+
+    return render_template('admin/overdues.html',
+                           overdues=pagination.items,
+                           paid_status=paid_status,
+                           total_unpaid=float(total_unpaid),
+                           page=pagination.page,
+                           pages=pagination.pages,
+                           total=pagination.total)
+
+
+# 管理员标记罚款已缴纳（线下缴费）
+@app.route('/admin/mark_paid/<int:overdue_id>')
+def mark_paid(overdue_id):
+    if session.get('user_type') != 'admin':
+        return redirect(url_for('index'))
+
+    overdue = OverdueRecordView.query.get(overdue_id)
+    if not overdue:
+        flash('记录不存在', 'danger')
+        return redirect(url_for('admin_overdues'))
+
+    if overdue.paid_status:
+        flash('该罚款已缴纳', 'info')
+        return redirect(url_for('admin_overdues'))
+
+    try:
+        overdue.paid_status = True
+        overdue.paid_date = datetime.now().date()
+        db.session.commit()
+        flash(f'已标记成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'操作失败：{str(e)}', 'danger')
+
+    return redirect(url_for('admin_overdues'))
 
 
 # ==================== 退出登录 ====================

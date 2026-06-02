@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}预约管理 - 管理员{% endblock %}
+
+{% block content %}
+
+<!-- 筛选栏 -->
+<div class="section">
+    <form method="GET" action="{{ url_for('admin_reservations') }}">
+        <div class="search-box">
+            <select name="status" class="status-select">
+                <option value="">全部状态</option>
+                <option value="等待中" {% if status == '等待中' %}selected{% endif %}>等待中</option>
+                <option value="已取书" {% if status == '已取书' %}selected{% endif %}>已取书</option>
+                <option value="已取消" {% if status == '已取消' %}selected{% endif %}>已取消</option>
+            </select>
+            <button type="submit" class="btn">筛选</button>
+        </div>
+    </form>
+</div>
+
+<!-- 预约表格 -->
+<div class="section">
+    <table class="book-table">
+        <thead>
+            <tr>
+                <th>预约ID</th>
+                <th>学生姓名</th>
+                <th>学号</th>
+                <th>书名</th>
+                <th>图书编号</th>
+                <th>预约日期</th>
+                <th>过期日期</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+            {% if reservations %}
+                {% for reserve in reservations %}
+                    <td>{{ reserve.reserve_id }}</td>
+                    <td>{{ reserve.student.name if reserve.student else '-' }}</td>
+                    <td>{{ reserve.student_id }}</td>
+                    <td>{{ reserve.book.title if reserve.book else '-' }}</td>
+                    <td>{{ reserve.book_id }}</td>
+                    <td>{{ reserve.reserve_date }}</td>
+                    <td>{{ reserve.expire_date or '-' }}</td>
+                    <td>
+                        {% if reserve.status == '等待中' %}
+                            {% if reserve.expire_date and reserve.expire_date < now().date() %}
+                                <span>已过期</span>
+                            {% else %}
+                                <span>等待中</span>
+                            {% endif %}
+                        {% elif reserve.status == '已取书' %}
+                            <span>已取书</span>
+                        {% elif reserve.status == '已取消' %}
+                            <span>已取消</span>
+                        {% else %}
+                            <span>{{ reserve.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <a href="{{ url_for('delete_reservation',reserve_id=reserve.reserve_id) }}" onclick="return confirm('确认删除此预约记录吗')">删除</a>
+                    </td>
+                </tr>
+            {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="9" class="empty-row">暂无预约记录</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页导航 -->
+{% if pages and pages|int > 1 %}
+<div class="pagination">
+    <div class="pagination-inner">
+        {% if page|int > 1 %}
+            <a href="{{ url_for('admin_reservations', status=status, page=page|int - 1) }}" class="btn">« 上一页</a>
+        {% endif %}
+
+        <span class="page-info">第 {{ page|default(1) }} / {{ pages }} 页</span>
+
+        {% if page|int < pages|int %}
+            <a href="{{ url_for('admin_reservations', status=status, page=page|int + 1) }}" class="btn">下一页 »</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 统计信息 -->
+<div class="total-info">
+    共 {{ total }} 条记录
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 # models.py
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 
 db = SQLAlchemy()
 
@@ -74,10 +74,24 @@ class BorrowRecord(db.Model):
     student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'))
     book_id = db.Column(db.String(20), db.ForeignKey('book.book_id'))
     borrow_date = db.Column(db.Date, nullable=False)
-    due_date = db.Column(db.Date, nullable=False)
+    # due_date = db.Column(db.Date, nullable=False)
     return_date = db.Column(db.Date)
-    status = db.Column(db.String(20), default='借出')
+    # status = db.Column(db.String(20), default='借出')
     # created_at = db.Column(db.DateTime, default=datetime.now)
+    @property
+    def due_date(self):
+        """动态计算应还日期（假设借期30天）"""
+        return self.borrow_date + timedelta(days=30)
+
+    @property
+    def status(self):
+        """动态计算状态"""
+        if self.return_date:
+            return '已还'
+        elif self.due_date < datetime.now().date():
+            return '逾期'
+        else:
+            return '借阅中'
 
     book = db.relationship('Book', backref='borrow_records')
 
@@ -109,14 +123,36 @@ class OverdueRecord(db.Model):
 
     overdue_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     borrow_id = db.Column(db.Integer, db.ForeignKey('borrow_record.record_id'))
-    student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'))
-    overdue_days = db.Column(db.Integer, default=0)
-    fine_amount = db.Column(db.Numeric(10, 2), default=0)
+    # student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'))
+    # overdue_days = db.Column(db.Integer, default=0)
+    # fine_amount = db.Column(db.Numeric(10, 2), default=0)
     paid_status = db.Column(db.Boolean, default=False)
     paid_date = db.Column(db.Date)
     # created_at = db.Column(db.DateTime, default=datetime.now)
 
     borrow = db.relationship('BorrowRecord', backref='overdue')
 
+
     def __repr__(self):
         return f'<OverdueRecord {self.overdue_id}>'
+
+class OverdueRecordView(db.Model):
+    """逾期记录视图（只读）"""
+    __tablename__ = 'overdue_record_view'
+    __table_args__ = {'extend_existing': True, 'info': {'is_view': True}}
+    overdue_id = db.Column(db.Integer, primary_key=True)
+    borrow_id = db.Column(db.Integer)
+    student_id = db.Column(db.String(20))
+    student_name = db.Column(db.String(50))
+    book_id = db.Column(db.String(20))
+    book_title = db.Column(db.String(200))
+    borrow_date = db.Column(db.Date)
+    return_date = db.Column(db.Date)
+    due_date = db.Column(db.Date)
+    overdue_days = db.Column(db.Integer)
+    fine_amount = db.Column(db.Numeric(10, 2))
+    paid_status = db.Column(db.Boolean)
+    paid_date = db.Column(db.Date)
+
+    def __repr__(self):
+        return f'<OverdueRecordView {self.overdue_id}>'

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}历史逾期{% endblock %}
+
+{% block content %}
+<div class="section">
+    <h5>历史逾期记录</h5>
+    
+    <table class="book-table">
+        <thead>
+            <tr>
+                <th>书名</th>
+                <th>借书日期</th>
+                <th>应还日期</th>
+                <th>还书日期</th>
+                <th>逾期天数</th>
+                <th>罚款金额</th>
+                <th>缴纳状态</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for overdue in overdues %}
+            <tr>
+                <td>{{ overdue.book_title if overdue.book_title else '-' }}</td>
+                <td>{{ overdue.borrow_date if overdue.borrow_date else '-' }}</td>
+                <td>{{ (overdue.due_date) if overdue.due_date else '-' }}</td>
+                <td>{{ (overdue.return_date) if overdue.return_date else '-' }}</td>
+                <td>{{ overdue.overdue_days }}天</td>
+                <td>¥{{ "%.2f"|format(overdue.fine_amount) }}</td>
+                <td>
+                    {% if overdue.paid_status %}
+                        <span style="color: green;">已缴纳</span>
+                    {% else %}
+                        <span style="color: red;">未缴纳</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination">
+    <div class="pagination-inner">
+        {% if page > 1 %}
+            <a href="{{ url_for('student_overdue_history', page=page-1) }}" class="btn">« 上一页</a>
+        {% endif %}
+        <span class="page-info">第 {{ page }} / {{ pages }} 页</span>
+        {% if page < pages %}
+            <a href="{{ url_for('student_overdue_history', page=page+1) }}" class="btn">下一页 »</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

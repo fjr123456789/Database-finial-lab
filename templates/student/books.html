@@ -24,7 +24,8 @@
                 <th>作者</th>
                 <th>出版社</th>
                 <th>可借数量</th>
-                <th>操作</th>
+                <th>预约</th>
+                <th>借书</th>
             </tr>
         </thead>
         <tbody>
@@ -41,6 +42,9 @@
                             {% else %}
                                 <span class="unavailable">0/{{ book.total_count }}</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('reserve_book',  book_id=book.book_id) }}"onclick="return confirm('确认预约《{{ book.title }}》？')">预约</a>
                         </td>
                         <td>
                             {% if book.available_count > 0 %}

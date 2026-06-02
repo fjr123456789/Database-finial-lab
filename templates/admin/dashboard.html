@@ -7,6 +7,24 @@
     <h4>欢迎回来，管理员！</h4>
 </div>
 
+<div class="stats2">
+    <div class="stat-card2" onclick="location.href='{{ url_for('admin_books') }}'">
+        <div class="stat-number">图书管理</div>
+    </div>
+    <div class="stat-card2" onclick="location.href='{{ url_for('admin_students') }}'">
+        <div class="stat-number">学生管理</div>
+    </div>
+    <div class="stat-card2" onclick="location.href='{{ url_for('admin_borrows') }}'">
+        <div class="stat-number">借阅管理</div>
+    </div>
+    <div class="stat-card2" onclick="location.href='{{ url_for('admin_reservations') }}'">
+        <div class="stat-number">预约管理</div>
+    </div>
+    <div class="stat-card2" onclick="location.href='{{ url_for('admin_overdues') }}'">
+        <div class="stat-number">逾期管理</div>
+    </div>
+</div>
+
 <div class="stats">
     <div class="stat-card">
         <div class="stat-number">{{ total_books }}</div>
@@ -26,8 +44,10 @@
     </div>
 </div>
 
+
+
 <div class="section">
-    <h5>当前借阅 <span>({{ active_borrows }} 本)</span></h5>
+    <h5>当前借出 <span>({{ active_borrows }} 本)</span></h5>
 
     {% if current_borrows %}
         <table class="book-table">
@@ -62,7 +82,7 @@
             </tbody>
         </table>
     {% else %}
-        <p>暂无借阅记录</p>
+        <p style="font-size: 1.3rem">暂无借阅记录</p>
     {% endif %}
 </div>
 
@@ -102,7 +122,7 @@
             </tbody>
         </table>
     {% else %}
-        <p>暂无借阅记录</p>
+        <p style="font-size: 1.3rem">暂无借阅记录</p>
     {% endif %}
 </div>
 {% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}历史借阅{% endblock %}
+
+{% block content %}
+<div class="section">
+    <h5>历史借阅记录</h5>
+    
+    <table class="book-table">
+        <thead>
+            <tr>
+                <th>书名</th>
+                <th>借书日期</th>
+                <th>应还日期</th>
+                <th>实际归还日期</th>
+                <th>状态</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for borrow in borrows %}
+            <tr>
+                <td>{{ borrow.book.title if borrow.book else '-' }}</td>
+                <td>{{ borrow.borrow_date }}</td>
+                <td>{{ borrow.borrow_date + timedelta(days=30) }}</td>
+                <td>{{ borrow.return_date or '-' }}</td>
+                <td>
+                    {% if borrow.return_date%}
+                        {% if borrow.return_date > borrow.borrow_date + timedelta(days=30) %}
+                            <span style="color: red;">逾期归还</span>
+                        {% else %}
+                            <span style="color: green;">已归还</span>
+                        {% endif %}
+                    {% else %}
+                        {% if now().date() > borrow.borrow_date + timedelta(days=30) %}
+                            <span style="color: red;">逾期未还</span>
+                        {% else %}
+                            <span style="color: green;">未归还</span>
+                        {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination">
+    <div class="pagination-inner">
+        {% if page > 1 %}
+            <a href="{{ url_for('student_borrow_history', page=page-1) }}" class="btn">« 上一页</a>
+        {% endif %}
+        <span class="page-info">第 {{ page }} / {{ pages }} 页</span>
+        {% if page < pages %}
+            <a href="{{ url_for('student_borrow_history', page=page+1) }}" class="btn">下一页 »</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}编辑学生信息{% endblock %}
+
+{% block content %}
+<div class="box">
+    <div class="left"></div>
+    <div class="right">
+        <h4>编辑学生信息</h4>
+        <form method="POST" action="{{ url_for('edit_student', student_id=student.student_id) }}" onsubmit="return validateForm()">
+            <!-- 学号（只读，不可修改） -->
+            <input name="student_id" class="acc" type="text" placeholder="学号*"
+                   id="student_id" value="{{ student.student_id }}" readonly disabled>
+
+            <!-- 姓名 -->
+            <input name="name" class="acc" type="text" placeholder="姓名*"
+                   id="name" value="{{ student.name }}" required>
+            <small class="error-msg" id="name_error"></small>
+
+            <!-- 密码（可选修改） -->
+            <input name="password" class="acc" type="password" placeholder="新密码（留空则不修改）"
+                   id="password">
+            <input name="confirm_password" class="acc" type="password" placeholder="确认新密码"
+                   id="confirm_password">
+            <small class="error-msg" id="confirm_error"></small>
+
+            <!-- 手机号 -->
+            <input name="phone" class="acc" type="text" placeholder="手机号"
+                   id="phone" value="{{ student.phone or '' }}">
+
+            <!-- 邮箱 -->
+            <input name="email" class="acc" type="text" placeholder="邮箱"
+                   id="email" value="{{ student.email or '' }}">
+
+            <input class="Login" type="submit" value="保存修改">
+            
+        </form>
+        <div class="fn">
+            <a href="{{ url_for('admin_students') }}">返回学生管理</a>
+            <a href="{{ url_for('admin_students') }}">取消</a>
+        </div>
+    </div>
+</div>
+
+<script>
+function validateForm() {
+    let isValid = true;
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm_password').value;
+
+    // 姓名验证（至少2个字符）
+    const name = document.getElementById('name').value;
+    if (!name) {
+        showError('name', '请输入姓名');
+        isValid = false;
+    } else if (name.length < 2) {
+        showError('name', '姓名至少2个字符');
+        isValid = false;
+    } else {
+        hideError('name');
+    }
+
+    // 如果填写了密码，才进行密码验证
+    if (password || confirm) {
+        if (!password) {
+            showError('confirm', '请输入新密码');
+            isValid = false;
+        } else if (password.length < 6) {
+            showError('confirm', '密码至少6位');
+            isValid = false;
+        } else if (password !== confirm) {
+            showError('confirm', '两次密码不一致');
+            isValid = false;
+        } else {
+            hideError('confirm');
+        }
+    } else {
+        hideError('confirm');  // 都为空时隐藏错误
+    }
+
+    return isValid;
+}
+
+function showError(fieldId, message) {
+    const errorSpan = document.getElementById(fieldId + '_error');
+    if (errorSpan) {
+        errorSpan.textContent = message;
+        errorSpan.style.visibility = 'visible';
+    }
+}
+
+function hideError(fieldId) {
+    const errorSpan = document.getElementById(fieldId + '_error');
+    if (errorSpan) {
+        errorSpan.style.visibility = 'hidden';
+    }
+}
+
+// 确认密码实时验证
+const confirmInput = document.getElementById('confirm_password');
+if (confirmInput) {
+    confirmInput.addEventListener('input', function() {
+        const password = document.getElementById('password').value;
+        if (this.value && password !== this.value) {
+            showError('confirm', '两次密码不一致');
+        } else {
+            hideError('confirm');
+        }
+    });
+}
+</script>
+
+{% endblock %}

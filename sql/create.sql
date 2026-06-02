@@ -69,12 +69,12 @@ CREATE TABLE `borrow_record` (
     `student_id` VARCHAR(20) NOT NULL COMMENT '学号',
     `book_id` VARCHAR(20) NOT NULL COMMENT '图书编号',
     `borrow_date` DATE NOT NULL COMMENT '借书日期',
-    `due_date` DATE NOT NULL COMMENT '应还日期',
+--     `due_date` DATE NOT NULL COMMENT '应还日期',
     `return_date` DATE DEFAULT NULL COMMENT '实际归还日期',
-    `status` ENUM('借阅中', '已还', '逾期') DEFAULT '借阅中' COMMENT '状态',
+--     `status` ENUM('借阅中', '已还', '逾期') DEFAULT '借阅中' COMMENT '状态',
     -- `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`student_id`) REFERENCES `student`(`student_id`) ,-- ON DELETE CASCADE,
-    FOREIGN KEY (`book_id`) REFERENCES `book`(`book_id`) -- ON DELETE CASCADE-- ,
+    FOREIGN KEY (`student_id`) REFERENCES `student`(`student_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`book_id`) REFERENCES `book`(`book_id`) ON DELETE CASCADE-- ,
 --     INDEX `idx_student` (`student_id`),
 --     INDEX `idx_book` (`book_id`),
 --     INDEX `idx_status` (`status`),
@@ -93,8 +93,8 @@ CREATE TABLE `reservation_record` (
     `expire_date` DATE DEFAULT NULL COMMENT '过期日期',
     `status` ENUM('等待中', '已取书', '已取消') DEFAULT '等待中' COMMENT '状态',
     -- `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`student_id`) REFERENCES `student`(`student_id`) ,-- ON DELETE CASCADE,
-    FOREIGN KEY (`book_id`) REFERENCES `book`(`book_id`) -- ON DELETE CASCADE,
+    FOREIGN KEY (`student_id`) REFERENCES `student`(`student_id`)  ON DELETE CASCADE,
+    FOREIGN KEY (`book_id`) REFERENCES `book`(`book_id`) ON DELETE CASCADE
 --     INDEX `idx_student` (`student_id`),
 --     INDEX `idx_book` (`book_id`)
 );--  ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='预定记录表';
@@ -106,14 +106,14 @@ DROP TABLE IF EXISTS `overdue_record`;
 CREATE TABLE `overdue_record` (
     `overdue_id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '逾期ID',
     `borrow_id` INT NOT NULL COMMENT '借阅记录ID',
-    `student_id` VARCHAR(20) NOT NULL COMMENT '学号',
-    `overdue_days` INT DEFAULT 0 COMMENT '逾期天数',
-    `fine_amount` DECIMAL(10,2) DEFAULT 0 COMMENT '罚款金额',
+--     `student_id` VARCHAR(20) NOT NULL COMMENT '学号',
+--     `overdue_days` INT DEFAULT 0 COMMENT '逾期天数',
+--     `fine_amount` DECIMAL(10,2) DEFAULT 0 COMMENT '罚款金额',
     `paid_status` BOOLEAN DEFAULT FALSE COMMENT '是否已缴费',
     `paid_date` DATE DEFAULT NULL COMMENT '缴费日期',
     -- `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`borrow_id`) REFERENCES `borrow_record`(`record_id`),--  ON DELETE CASCADE,
-    FOREIGN KEY (`student_id`) REFERENCES `student`(`student_id`) -- ON DELETE CASCADE,
+    FOREIGN KEY (`borrow_id`) REFERENCES `borrow_record`(`record_id`) ON DELETE CASCADE-- ,
+--     FOREIGN KEY (`student_id`) REFERENCES `student`(`student_id`) ON DELETE CASCADE
 --     INDEX `idx_student` (`student_id`),
 --     INDEX `idx_paid` (`paid_status`)
 );--  ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='逾期记录表';
@@ -133,58 +133,4 @@ BEGIN
 END//
 DELIMITER ;
 
--- =====================================================
--- 11. 触发器：更新借阅状态前自动处理（可选）
--- =====================================================
-DROP TRIGGER IF EXISTS `before_borrow_update`;
-DELIMITER //
-CREATE TRIGGER `before_borrow_update`
-BEFORE UPDATE ON `borrow_record`
-FOR EACH ROW
-BEGIN
-    IF NEW.return_date IS NOT NULL AND NEW.return_date > NEW.due_date THEN
-        SET NEW.status = '逾期';
-    ELSEIF NEW.return_date IS NOT NULL THEN
-        SET NEW.status = '已还';
-    END IF;
-END//
-DELIMITER ;
 
-
--- =====================================================
--- 14. 创建视图（可选，便于查询）
--- =====================================================
-
--- 借阅详情视图
-DROP VIEW IF EXISTS `v_borrow_details`;
-CREATE VIEW `v_borrow_details` AS
-SELECT 
-    r.record_id,
-    r.student_id,
-    s.name AS student_name,
-    r.book_id,
-    b.title AS book_title,
-    b.author AS book_author,
-    r.borrow_date,
-    r.due_date,
-    r.return_date,
-    r.status,
-    DATEDIFF(CURDATE(), r.due_date) AS overdue_days,
-    o.fine_amount,
-    o.paid_status
-FROM borrow_record r
-LEFT JOIN student s ON r.student_id = s.student_id
-LEFT JOIN book b ON r.book_id = b.book_id
-LEFT JOIN overdue_record o ON r.record_id = o.borrow_id;
-
--- 当前借阅视图
-DROP VIEW IF EXISTS `v_current_borrows`;
-CREATE VIEW `v_current_borrows` AS
-SELECT * FROM v_borrow_details 
-WHERE status = '借出' AND return_date IS NULL;
-
--- 逾期未还视图
-DROP VIEW IF EXISTS `v_overdue_borrows`;
-CREATE VIEW `v_overdue_borrows` AS
-SELECT * FROM v_current_borrows 
-WHERE due_date < CURDATE();
