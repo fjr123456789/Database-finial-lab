@@ -56,6 +56,27 @@
             <input type="file" name="cover_image" class="search-input" accept="image/png,image/jpeg,image/jpg,image/gif">
             <small>支持 PNG、JPG、JPEG、GIF 格式</small>
         </div>
+
+        <!-- ========== 新增：电子书文件上传 ========== -->
+        <!-- 当前电子书 -->
+        <div class="search-box">
+            <label style="font-size: 1.6rem; width: 100px;">当前电子书</label>
+            <div>
+                {% if book.content %}
+                    <span style="color: green;">✓ 已上传</span>
+                    <a href="{{ url_for('static', filename=book.content) }}" class="btn" target="_blank">预览</a>
+                {% else %}
+                    <span style="color: gray;">未上传</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 上传新电子书 -->
+        <div class="search-box">
+            <label style="font-size: 1.6rem; width: 100px;">上传电子书</label>
+            <input type="file" name="ebook_file" class="search-input" accept=".pdf,.epub,.mobi">
+            <small>支持 PDF、EPUB、MOBI 格式，文件大小不超过 50MB</small>
+        </div>
         
         <div>
             <button type="submit" class="btn">保存修改</button>

@@ -18,54 +18,53 @@ TRUNCATE TABLE admin;
 SET FOREIGN_KEY_CHECKS = 1;
 -- 插入管理员
 INSERT INTO `admin` (`admin_id`, `name`, `password`) VALUES
-('admin001', '系统管理员', '123456'),
-('admin002', '张老师', '123456');
+('admin001', '系统管理员', '123456');
 
 -- 插入学生
 INSERT INTO `student` (`student_id`, `name`, `password`, `phone`, `email`) VALUES
-('2021001', '张三', '123456', '13800138001', 'zhangsan@example.com'),
-('2021002', '李四', '123456', '13800138002', 'lisi@example.com'),
-('2021003', '王五', '123456', '13800138003', 'wangwu@example.com'),
-('2021004', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
-('2021005', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
-('2021006', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
-('2021007', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
-('2021008', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
-('2021009', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
-('20210100', '赵六', '123456', '13800138004', 'zhaoliu@example.com'),
-('20210011', '赵六', '123456', '13800138004', 'zhaoliu@example.com');
+('001', '张三', '123456', '157001', 'zhangsan@example.com'),
+('002', '李四', '123456', '157001', 'lisi@example.com'),
+('003', '王五', '123456', '157001', 'wangwu@example.com'),
+('004', '赵六', '123456', '157001', 'zhaoliu@example.com'),
+('005', '赵六', '123456', '157001', 'zhaoliu@example.com'),
+('006', '赵六', '123456', '157001', 'zhaoliu@example.com'),
+('007', '赵六', '123456', '157001', 'zhaoliu@example.com'),
+('008', '赵六', '123456', '157001', 'zhaoliu@example.com'),
+('009', '赵六', '123456', '157001', 'zhaoliu@example.com'),
+('100', '赵六', '123456', '157001', 'zhaoliu@example.com'),
+('011', '赵六', '123456', '157001', 'zhaoliu@example.com');
 
 -- 插入图书
-INSERT INTO `book` (`book_id`, `title`, `author`, `publisher`, `total_count`, `available_count`) VALUES
-('B001', 'Python编程从入门到实践', 'Eric Matthes', '人民邮电出版社', 3, 3),
-('B002', '数据库系统概念', 'Abraham Silberschatz', '机械工业出版社', 2, 2),
-('B003', 'Flask Web开发', 'Miguel Grinberg', '人民邮电出版社', 2, 2),
-('B004', '深入理解计算机系统', 'Randal E. Bryant', '机械工业出版社', 2, 2),
-('B005', '算法导论', 'Thomas H. Cormen', '机械工业出版社', 1, 1),
-('B006', 'Java编程思想', 'Bruce Eckel', '机械工业出版社', 2, 2),
-('B007', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2),
-('B008', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2),
-('B009', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2),
-('B010', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2),
-('B011', '设计模式', 'Erich Gamma', '清华大学出版社', 2, 2);
+INSERT INTO `book` (`book_id`, `title`, `author`, `publisher`, `total_count`, `available_count`,`cover_image`,`content`) VALUES
+('B001', '分成两半的子爵', '卡尔维诺', 'Yilin Press', 3, 3, 'uploads/covers/img.png', 'uploads/content/B001.pdf'),
+('B002', '沙之书', '豪尔赫·路易斯·博尔赫斯', '上海译文出版社', 2, 2,'doc/image/default.png',''),
+('B003', '十日谈', '薄伽丘', '人民文学出版社', 2, 2, 'doc/image/default.png',''),
+('B004', '银河系漫游指南', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
+('B005', '宇宙尽头的餐馆', '道格拉斯·亚当斯', '四川科学技术出版社', 1, 1, 'doc/image/default.png',''),
+('B006', '生命宇宙以及一切', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
+('B007', '再见,谢谢鱼', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
+('B008', '基本上无害', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
+('B009', '宇宙尽头的餐馆', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
+('B010', '宇宙尽头的餐馆', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
+('B011', '宇宙尽头的餐馆', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png','');
 
--- 插入借阅记录示例（包含正常借阅和逾期借阅）
+-- 插入借阅记录示例
 -- 当前借阅（未逾期）
 INSERT INTO `borrow_record` (`student_id`, `book_id`, `borrow_date`, `return_date`) VALUES
-('2021001', 'B001', DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_ADD(CURDATE(), INTERVAL 20 DAY)),
-('2021002', 'B003', DATE_SUB(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 25 DAY)),
-('2021003', 'B004', DATE_SUB(CURDATE(), INTERVAL 3 DAY), DATE_ADD(CURDATE(), INTERVAL 27 DAY));
+('001', 'B001', DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_ADD(CURDATE(), INTERVAL 20 DAY)),
+('002', 'B003', DATE_SUB(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 25 DAY)),
+('003', 'B004', DATE_SUB(CURDATE(), INTERVAL 3 DAY), DATE_ADD(CURDATE(), INTERVAL 27 DAY));
 
 -- 逾期借阅（已逾期）
 INSERT INTO `borrow_record` (`student_id`, `book_id`, `borrow_date`) VALUES
-('2021001', 'B002', DATE_SUB(CURDATE(), INTERVAL 35 DAY)),
-('2021002', 'B005', DATE_SUB(CURDATE(), INTERVAL 40 DAY));
+('001', 'B002', DATE_SUB(CURDATE(), INTERVAL 35 DAY)),
+('002', 'B005', DATE_SUB(CURDATE(), INTERVAL 40 DAY));
 
 -- 已归还记录（历史）
 INSERT INTO `borrow_record` (`student_id`, `book_id`, `borrow_date`, `return_date`) VALUES
-('2021003', 'B001', DATE_SUB(CURDATE(), INTERVAL 60 DAY), DATE_SUB(CURDATE(), INTERVAL 28 DAY)),
-('2021001', 'B003', DATE_SUB(CURDATE(), INTERVAL 50 DAY), DATE_SUB(CURDATE(), INTERVAL 25 DAY)),
-('2021004', 'B006', DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY));
+('003', 'B001', DATE_SUB(CURDATE(), INTERVAL 60 DAY), DATE_SUB(CURDATE(), INTERVAL 28 DAY)),
+('001', 'B003', DATE_SUB(CURDATE(), INTERVAL 50 DAY), DATE_SUB(CURDATE(), INTERVAL 25 DAY)),
+('004', 'B006', DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY));
 
 -- 插入逾期罚款记录（对应上面的逾期借阅）
 INSERT INTO `overdue_record` (`borrow_id`, `paid_status`) VALUES
@@ -74,7 +73,7 @@ INSERT INTO `overdue_record` (`borrow_id`, `paid_status`) VALUES
 
 -- 插入预定记录示例
 INSERT INTO `reservation_record` (`student_id`, `book_id`, `reserve_date`, `status`) VALUES
-('2021004', 'B007', CURDATE(), '等待中'),
-('2021002', 'B002', CURDATE(), '等待中'),
-('2021001', 'B010', CURDATE(), '等待中');
+('004', 'B007', CURDATE(), '等待中'),
+('002', 'B002', CURDATE(), '等待中'),
+('001', 'B010', CURDATE(), '等待中');
 

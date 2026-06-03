@@ -239,6 +239,7 @@ html::before {
     border-radius: 4px;
     font-size: 2rem;
     font-weight: bold;
+    margin-top: 0.5rem;
 }
 
 .book-status.available {

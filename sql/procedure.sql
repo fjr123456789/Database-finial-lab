@@ -200,11 +200,8 @@ BEGIN
             SET v_due_date = DATE_ADD(v_borrow_date, INTERVAL 30 DAY);
             
             IF v_today > v_due_date THEN
-               --  SET v_overdue_days = DATEDIFF(v_today, v_due_date);
---                 SET v_fine = v_overdue_days * 0.5;
---                 
---                 INSERT INTO overdue_record(borrow_id, student_id, overdue_days, fine_amount, paid_status)
---                 VALUES(p_record_id, v_student_id, v_overdue_days, v_fine, FALSE);
+               SET v_overdue_days = DATEDIFF(v_today, v_due_date);
+               SET v_fine = v_overdue_days * 0.5; 
                 
                 SET p_message = CONCAT('还书成功，逾期', v_overdue_days, '天，罚款', v_fine, '元');
             ELSE
@@ -218,6 +215,129 @@ BEGIN
 END//
 
 DELIMITER ;
+
+
+DROP PROCEDURE IF EXISTS `BorrowBook`;
+DELIMITER $$
+
+CREATE PROCEDURE `BorrowBook`(
+    IN p_student_id VARCHAR(20),
+    IN p_book_id VARCHAR(20),
+    OUT p_state INT,
+    OUT p_message VARCHAR(200)
+)
+BEGIN
+    DECLARE v_book_count INT;
+    DECLARE v_borrow_count INT;
+    DECLARE v_overdue_exists INT;
+    DECLARE v_book_title VARCHAR(200);
+    DECLARE v_today DATE;
+    DECLARE v_has_reservation INT;    -- 是否有预约
+    DECLARE v_book_status INT;        -- 图书状态
+    
+    DECLARE s INT DEFAULT 0;
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET s = 1;
+    
+    SET v_today = CURDATE();
+    SET p_state = 0;
+    SET p_message = '';
+    
+    START TRANSACTION;
+    
+    -- 1. 检查图书是否存在且可借
+    SELECT available_count, title INTO v_book_count, v_book_title
+    FROM book 
+    WHERE book_id = p_book_id;
+    
+    IF v_book_count IS NULL THEN
+        SET p_state = 1;
+        SET p_message = '图书不存在';
+        SET s = 1;
+    ELSEIF v_book_count <= 0 THEN
+        SET p_state = 2;
+        SET p_message = '该书已借完';
+        SET s = 1;
+    END IF;
+    
+    -- 2. 检查是否有逾期未还
+    IF s = 0 THEN
+        SELECT COUNT(*) INTO v_overdue_exists
+        FROM borrow_record br
+        WHERE br.student_id = p_student_id
+          AND br.return_date IS NULL
+          AND DATE_ADD(br.borrow_date, INTERVAL 30 DAY) < v_today;
+        
+        IF v_overdue_exists > 0 THEN
+            SET p_state = 3;
+            SET p_message = '请先还清逾期图书';
+            SET s = 1;
+        END IF;
+    END IF;
+    
+    -- 3. 检查借阅数量（最多5本）
+    IF s = 0 THEN
+        SELECT COUNT(*) INTO v_borrow_count
+        FROM borrow_record
+        WHERE student_id = p_student_id
+          AND return_date IS NULL;
+        
+        IF v_borrow_count >= 5 THEN
+            SET p_state = 4;
+            SET p_message = '借书数量已达上限（5本）';
+            SET s = 1;
+        END IF;
+    END IF;
+    
+    -- 4. 检查预约情况（如果图书已被预约，只有预约者才能借阅）
+    IF s = 0 THEN
+        -- 检查图书是否有等待中的预约
+        SELECT COUNT(*) INTO v_has_reservation
+        FROM reservation_record
+        WHERE book_id = p_book_id 
+          AND status = '等待中';
+        
+        IF v_has_reservation > 0 THEN
+            -- 检查当前读者是否有预约
+            SELECT COUNT(*) INTO v_has_reservation
+            FROM reservation_record
+            WHERE book_id = p_book_id 
+              AND student_id = p_student_id 
+              AND status = '等待中';
+            
+            IF v_has_reservation = 0 THEN
+                SET p_state = 6;
+                SET p_message = '借阅失败：该书已被预约，只有预约者才能借阅';
+                SET s = 1;
+            END IF;
+        END IF;
+    END IF;
+    
+    -- 5. 执行借阅操作
+    IF s = 0 THEN
+        -- 创建借阅记录
+        INSERT INTO borrow_record (student_id, book_id, borrow_date, return_date)
+        VALUES (p_student_id, p_book_id, v_today, NULL);
+        
+        
+        -- 如果当前读者有预约，删除该预约记录
+        DELETE FROM reservation_record 
+        WHERE student_id = p_student_id 
+          AND book_id = p_book_id 
+          AND status = '等待中';
+        
+        SET p_state = 0;
+        SET p_message = CONCAT('成功借阅《', v_book_title, '》');
+        
+        COMMIT;
+    ELSE
+        ROLLBACK;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- CALL BorrowBook('001', 'B010', @state, @message);
+-- SELECT @state, @message;
 
 -- =====================================================
 -- 检查是否逾期

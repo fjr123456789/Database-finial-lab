@@ -14,8 +14,7 @@ class Student(db.Model):
     password = db.Column(db.String(100), nullable=False)
     phone = db.Column(db.String(20))
     email = db.Column(db.String(100))
-    image = db.Column(db.String(255), default='static/doc/image/default.png')
-    # created_at = db.Column(db.DateTime, default=datetime.now)
+    image = db.Column(db.String(255), default='doc/image/default.png')
 
     # 关系
     borrow_records = db.relationship('BorrowRecord', backref='student', lazy='dynamic')
@@ -35,7 +34,6 @@ class Admin(db.Model):
     admin_id = db.Column(db.String(20), primary_key=True)
     name = db.Column(db.String(50), nullable=False)
     password = db.Column(db.String(100), nullable=False)
-    # created_at = db.Column(db.DateTime, default=datetime.now)
 
     def get_id(self):
         return self.admin_id
@@ -54,7 +52,7 @@ class Book(db.Model):
     publisher = db.Column(db.String(100))
     total_count = db.Column(db.Integer, default=1)
     available_count = db.Column(db.Integer, default=1)
-    cover_image = db.Column(db.String(255), default='static/doc/image/default.png')
+    cover_image = db.Column(db.String(255), default='doc/image/default.png')
     content = db.Column(db.String(255))
 
     def is_available(self):
@@ -121,7 +119,6 @@ class OverdueRecord(db.Model):
     # fine_amount = db.Column(db.Numeric(10, 2), default=0)
     paid_status = db.Column(db.Boolean, default=False)
     paid_date = db.Column(db.Date)
-    # created_at = db.Column(db.DateTime, default=datetime.now)
 
     borrow = db.relationship('BorrowRecord', backref='overdue')
 
@@ -149,3 +146,4 @@ class OverdueRecordView(db.Model):
 
     def __repr__(self):
         return f'<OverdueRecordView {self.overdue_id}>'
+

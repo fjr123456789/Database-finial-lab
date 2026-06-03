@@ -22,6 +22,18 @@
                             <span class="book-status {% if book.available_count > 0 %}available{% else %}unavailable{% endif %}">
                                 {% if book.available_count > 0 %}可借{% else %}已借完{% endif %}
                             </span>
+                            <div>
+                                {% if book.content %}
+                                    <a href="{{ url_for('static', filename=book.content) }}" 
+                                       download="{{ book.title }}.pdf"
+                                       class="book-status available"
+                                       onclick="return confirm('确认下载《{{ book.title }}》？')">下载电子书
+                                    </a>
+                                {% else %}
+                                    <span class="book-status unavailable">暂不可下载
+                                    </span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     {% endfor %}

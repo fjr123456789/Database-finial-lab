@@ -1,11 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
 from datetime import datetime, timedelta, date
 from flask_sqlalchemy import SQLAlchemy
 import config
 from flask_apscheduler import APScheduler
 from werkzeug.utils import secure_filename
 import os
-from config import UPLOAD_FOLDER, MAX_CONTENT_LENGTH, ALLOWED_EXTENSIONS
+from config import UPLOAD_FOLDER, MAX_CONTENT_LENGTH, ALLOWED_EXTENSIONS, UPLOAD_FOLDER_CONTENT
 
 from sqlalchemy import text, MetaData, create_engine, func
 from sqlalchemy.orm import DeclarativeBase
@@ -260,6 +260,7 @@ def student_books():
                            pages=pages,
                            total=total)
 # ==================== 借书（ORM + 事务）====================
+# ==================== 借书（调用存储过程 - 使用text方式）====================
 @app.route('/student/borrow/<book_id>')
 def borrow_book(book_id):
     if session.get('user_type') != 'student':
@@ -269,64 +270,30 @@ def borrow_book(book_id):
     next_page = request.args.get('next', 'student_books')
 
     student_id = session['user_id']
-    today = date.today()
 
     try:
-        # 检查图书
-        book = Book.query.get(book_id)
-        if not book or book.available_count <= 0:
-            flash('该书已借完', 'warning')
-            return redirect(url_for('student_books'))
-
-        # 检查逾期未还（通过 borrow_date + 30 计算）
-        all_borrows = BorrowRecord.query.filter(
-            BorrowRecord.student_id == student_id,
-            BorrowRecord.return_date.is_(None)
-        ).all()
-
-        overdue_exists = False
-        for borrow in all_borrows:
-            if borrow.borrow_date + timedelta(days=30) < today:
-                overdue_exists = True
-                break
-
-        if overdue_exists:
-            flash('请先还清逾期图书', 'danger')
-            return redirect(url_for('student_dashboard'))
-
-        # 检查借阅数量（最多5本）
-        borrow_count = BorrowRecord.query.filter(
-            BorrowRecord.student_id == student_id,
-            BorrowRecord.return_date.is_(None)
-        ).count()
-
-        if borrow_count >= 5:
-            flash('借书数量已达上限（5本）', 'warning')
-            return redirect(url_for('student_books'))
-
-        # 创建借阅记录
-        new_borrow = BorrowRecord(
-            student_id=student_id,
-            book_id=book_id,
-            borrow_date=today,
-            return_date=None
+        # 使用 text() 调用存储过程
+        result = db.session.execute(
+            text("CALL BorrowBook(:student_id, :book_id, @state, @message)"),
+            {'student_id': student_id, 'book_id': book_id}
         )
-        db.session.add(new_borrow)
 
-        # 自动处理预约
-        reservation = ReservationRecord.query.filter(
-            ReservationRecord.student_id == student_id,
-            ReservationRecord.book_id == book_id,
-            ReservationRecord.status == '等待中'
-        ).first()
+        # 获取 OUT 参数
+        result_state = db.session.execute(text("SELECT @state, @message")).fetchone()
 
-        if reservation:
-            reservation.status = '已取书'
-            flash(f'成功借阅《{book.title}》（已自动确认预约）', 'success')
+        if result_state:
+            p_state = result_state[0]
+            p_message = result_state[1]
         else:
-            flash(f'成功借阅《{book.title}》', 'success')
+            p_state = 1
+            p_message = '未知错误'
 
         db.session.commit()
+
+        if p_state == 0:
+            flash(p_message, 'success')
+        else:
+            flash(f'借书失败：{p_message}', 'danger')
 
     except Exception as e:
         db.session.rollback()
@@ -344,27 +311,25 @@ def return_book(record_id):
     # 获取来源页面参数，用于结束时重定向
     next_page = request.args.get('next', 'student_dashboard')
     try:
-        # 获取原生数据库连接
-        connection = db.engine.raw_connection()
-        cursor = connection.cursor()
+        # 获取原生数据库连
 
-        # 调用存储过程
-        cursor.callproc('ReturnBook', (record_id, 0, ''))
-
+        # 使用 text() 调用存储过程
+        result = db.session.execute(
+            text("CALL ReturnBook(:record_id, @state, @message)"),
+            {'record_id': record_id}
+        )
         # 获取 OUT 参数（第2和第3个参数）
-        cursor.execute('SELECT @_ReturnBook_1, @_ReturnBook_2')
-        result = cursor.fetchone()
+        # 获取 OUT 参数
+        result_state = db.session.execute(text("SELECT @state, @message")).fetchone()
 
-        if result:
-            p_state = result[0]
-            p_message = result[1]
+        if result_state:
+            p_state = result_state[0]
+            p_message = result_state[1]
         else:
             p_state = 3
             p_message = '未知错误'
 
-        connection.commit()
-        cursor.close()
-        connection.close()
+        db.session.commit()
 
         if p_state == 0:
             flash(p_message, 'success')
@@ -403,7 +368,6 @@ def reserve_book(book_id):
         student_id=student_id,
         book_id=book_id,
         reserve_date=datetime.now().date(),
-        expire_date=datetime.now().date() + timedelta(days=7),
         status='等待中'
     )
 
@@ -627,12 +591,47 @@ def edit_book(book_id):
                 filename = secure_filename(f"{book_id}_{file.filename}")
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
+
+                # 删除旧封面
+                if book.cover_image:
+                    old_path = os.path.join('static', book.cover_image)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+
                 # 存储相对路径
                 book.cover_image = f'uploads/covers/{filename}'
                 flash('封面更新成功', 'success')
             elif file and file.filename:
                 flash('不支持的文件格式，请上传 PNG、JPG、JPEG 或 GIF', 'danger')
 
+        # ========== 处理电子书上传==========
+        if 'ebook_file' in request.files:
+            ebook_file = request.files['ebook_file']
+            if ebook_file and ebook_file.filename and ebook_file.filename.strip():
+                # 检查文件扩展名
+                ext = ebook_file.filename.rsplit('.', 1)[1].lower() if '.' in ebook_file.filename else ''
+                allowed_ebook_extensions = {'pdf'}
+
+                if ext in allowed_ebook_extensions:
+                    # 生成新文件名（使用时间戳避免重名）
+                    new_filename = f"ebook_{book_id}_{int(datetime.now().timestamp())}.{ext}"
+                    # 保存到 static/uploads/content 目录
+                    upload_dir = UPLOAD_FOLDER_CONTENT
+                    os.makedirs(upload_dir, exist_ok=True)
+                    filepath = os.path.join(upload_dir, new_filename)
+                    ebook_file.save(filepath)
+
+                    # 删除旧电子书
+                    if book.content:
+                        old_path = os.path.join('static', book.content)
+                        if os.path.exists(old_path):
+                            os.remove(old_path)
+
+                    # 存储相对路径（相对于 static 目录）
+                    book.content = f'uploads/content/{new_filename}'
+                    flash('电子书上传成功', 'success')
+                else:
+                    flash('不支持的文件格式，请上传 PDF', 'danger')
         try:
             db.session.commit()
             flash(f'图书《{book.title}》信息修改成功', 'success')
@@ -745,6 +744,13 @@ def edit_student(student_id):
                 filename = secure_filename(f"{student_id}_{file.filename}")
                 filepath = os.path.join(app.config['UPLOAD_FOLDER_IMAGE'], filename)
                 file.save(filepath)
+
+                # 删除旧头像
+                if student.image:
+                    old_path = os.path.join('static', student.image)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+
                 # 存储相对路径
                 student.image = f'uploads/image/{filename}'
                 flash('头像更新成功', 'success')
