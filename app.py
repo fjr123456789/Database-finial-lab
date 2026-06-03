@@ -63,7 +63,8 @@ def inject_now():
 # 创建跟路由，http://127.0.0.0:5000
 @app.route('/')
 def index():
-    return render_template('index.html')
+    books = Book.query.order_by(Book.book_id).all()  # 获取前6本图书
+    return render_template('index.html', books=books)
 
 
 # ==================== 学生注册（ORM方式）====================

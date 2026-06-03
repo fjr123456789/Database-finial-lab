@@ -169,21 +169,130 @@ html::before {
 
 .homepage_box {
     display: flex;
-    background: linear-gradient(145deg, #667eea, #8ec5fc 100%)no-repeat;
-    color: white;
+    gap: 2rem;
+    height: 80rem;
+    margin: 0 auto;
     padding: 2rem;
-    border-radius: 1rem;
-    margin-top: 2rem;
-    margin-bottom: 2rem;
-    gap: 1.5rem;
 }
 
 .homepage_box .left {
-    width: 60%;
-    height: 100%;
-    /*background-color: #8ec5fc;*/
+    flex: 1.5;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    gap: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow-y: auto;      /* 垂直方向滚动 */
+    overflow-x: hidden;    /* 隐藏水平滚动条 */
 }
 
-.homepage_box .right{
-    width: 40%;
+.homepage_box .right {
+    flex: 1;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
+
+.book-item {
+    background: white;
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: flex;    /*横向*/
+    /*text-align: center;*/
+    gap: 2rem;
+    transition: transform 0.2s;
+    margin-top: 2rem;
+
+}
+
+.book-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.book-cover-img {
+    /*width: 20%;*/
+    height: 200px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+.book-info {
+    width: 80%;
+}
+.book-info h5 {
+    margin: 0.5rem 0 0.25rem;
+    font-size: 2rem;
+    color: #333;
+}
+
+.book-info p {
+    margin: 0.25rem 0;
+    font-size: 1.8rem;
+    color: #666;
+}
+
+
+.book-status {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.book-status.available {
+    background: #d4edda;
+    color: #155724;
+}
+
+.book-status.unavailable {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.auth-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.auth-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.auth-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.auth-card h4 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.auth-card p {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: #666;
+}
+
+.btn-student {
+    font-size: 2rem;
+    background: #2872a7;
+    color: white;
+}
+
+
+.btn-admin {
+    font-size: 2rem;
+    background: #8773df;
+    color: #ffffff;
+}
+
+
