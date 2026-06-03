@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}编辑图书信息{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="stat-number">
+        <h5>编辑图书信息</h5>
+        <a href="{{ url_for('admin_books') }}" class="btn">返回列表</a>
+    </div>
+    
+    <form method="POST" action="{{ url_for('edit_book', book_id=book.book_id) }}" enctype="multipart/form-data", class="section">
+        <!-- 图书编号 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">图书编号</label>
+            <input type="text" class="search-input" value="{{ book.book_id }}" readonly disabled>
+        </div>
+        
+        <!-- 书名 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">书名 *</label>
+            <input type="text" name="title" class="search-input" value="{{ book.title }}" required>
+        </div>
+        
+        <!-- 作者 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">作者</label>
+            <input type="text" name="author" class="search-input" value="{{ book.author or '' }}" placeholder="选填">
+        </div>
+        
+        <!-- 出版社 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">出版社</label>
+            <input type="text" name="publisher" class="search-input" value="{{ book.publisher or '' }}" placeholder="选填">
+        </div>
+        
+        <!-- 总数量 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">总数量 *</label>
+            <input type="number" name="total_count" class="search-input" value="{{ book.total_count }}" min="0" required>
+            <small class="form-hint">当前可借数量：{{ book.available_count }}</small>
+        </div>
+        
+        <!-- 当前封面 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">当前封面</label>
+            <div>
+                <img src="{{ url_for('static', filename=book.cover_image or 'doc/image/default.png') }}" 
+                     class="cover-image" alt="封面">
+            </div>
+        </div>
+        
+        <!-- 上传新封面 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">更换封面</label>
+            <input type="file" name="cover_image" class="search-input" accept="image/png,image/jpeg,image/jpg,image/gif">
+            <small>支持 PNG、JPG、JPEG、GIF 格式</small>
+        </div>
+        
+        <div>
+            <button type="submit" class="btn">保存修改</button>
+            <a href="{{ url_for('admin_books') }}" class="btn">取消</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

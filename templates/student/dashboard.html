@@ -5,8 +5,25 @@
 {% block content %}
 <!-- 欢迎卡片 -->
 <div class="welcome-card">
-    <h4>欢迎回来，{{ session.user_name }}！</h4>
-    <p>学号：{{ session.user_id }}</p>
+    <div class="left">
+        <h4>欢迎回来，{{ session.user_name }}！</h4>
+        <p>学号：{{ session.user_id }}</p>
+    </div>
+    <div class="middle">
+        <p>学号：{{ student.student_id }}</p>
+        <p>姓名：{{ student.name }}</p>
+        <p>电话：{{ student.phone }}</p>
+        <p>email：{{ student.email }}</p>
+        <a style="font-size: 1.3rem" href="{{ url_for('edit_student', student_id=student.student_id) }}"
+                               onclick="return confirm('确定要修改信息吗？')">修改</a>
+    </div>
+    <div class="right">
+        <div>
+            <img src="{{ url_for('static', filename=student.image or 'doc/image/default.png') }}"
+                 class="cover-image" alt="封面">
+        </div>
+    </div>
+
 </div>
 
 <!-- 四个核心数据 -->
@@ -81,7 +98,6 @@
                     <th>书名</th>
                     <th>可借数量</th>
                     <th>预约日期</th>
-                    <th>过期日期</th>
                     <th>状态</th>
                     <th>借阅</th>
                     <th>操作</th>
@@ -98,11 +114,8 @@
                                 <span class="unavailable">0/{{ reserve.book.total_count }}</span>
                             {% endif %}</td>
                         <td>{{ reserve.reserve_date }}</td>
-                        <td>{{ reserve.expire_date or '-' }}</td>
                         <td>
-                            {% if reserve.expire_date and reserve.expire_date < now().date() %}
-                                <span style="color: red;">已过期</span>
-                            {% elif reserve.status == '已取书' %}
+                            {% if reserve.status == '已取书' %}
                                 <span style="color: green;">已取书</span>
                             {% elif reserve.status == '已取消' %}
                                 <span style="color: gray;">已取消</span>
@@ -118,7 +131,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if reserve.status == '等待中' and reserve.expire_date and reserve.expire_date >= now().date() %}
+                            {% if reserve.status == '等待中' %}
                                 <a href="{{ url_for('cancel_reservation', reserve_id=reserve.reserve_id) }}"
                                    onclick="return confirm('确认取消预约？')">取消预约</a>
                             {% else %}

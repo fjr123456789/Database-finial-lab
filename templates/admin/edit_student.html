@@ -3,43 +3,74 @@
 {% block title %}编辑学生信息{% endblock %}
 
 {% block content %}
-<div class="box">
-    <div class="left"></div>
-    <div class="right">
-        <h4>编辑学生信息</h4>
-        <form method="POST" action="{{ url_for('edit_student', student_id=student.student_id) }}" onsubmit="return validateForm()">
-            <!-- 学号（只读，不可修改） -->
-            <input name="student_id" class="acc" type="text" placeholder="学号*"
-                   id="student_id" value="{{ student.student_id }}" readonly disabled>
-
-            <!-- 姓名 -->
-            <input name="name" class="acc" type="text" placeholder="姓名*"
-                   id="name" value="{{ student.name }}" required>
-            <small class="error-msg" id="name_error"></small>
-
-            <!-- 密码（可选修改） -->
-            <input name="password" class="acc" type="password" placeholder="新密码（留空则不修改）"
-                   id="password">
-            <input name="confirm_password" class="acc" type="password" placeholder="确认新密码"
-                   id="confirm_password">
-            <small class="error-msg" id="confirm_error"></small>
-
-            <!-- 手机号 -->
-            <input name="phone" class="acc" type="text" placeholder="手机号"
-                   id="phone" value="{{ student.phone or '' }}">
-
-            <!-- 邮箱 -->
-            <input name="email" class="acc" type="text" placeholder="邮箱"
-                   id="email" value="{{ student.email or '' }}">
-
-            <input class="Login" type="submit" value="保存修改">
-            
-        </form>
-        <div class="fn">
-            <a href="{{ url_for('admin_students') }}">返回学生管理</a>
-            <a href="{{ url_for('admin_students') }}">取消</a>
-        </div>
+<div class="section">
+    <div class="stat-number">
+        <h5>编辑学生信息</h5>
+        {% if session.user_type == 'admin' %}
+            <a href="{{ url_for('admin_students') }}" class="btn">返回列表</a>
+        {% else %}
+            <a href="{{ url_for('student_dashboard') }}" class="btn">返回工作台</a>
+        {% endif %}
     </div>
+    <form method="POST" action="{{ url_for('edit_student', student_id=student.student_id) }}" enctype="multipart/form-data", class="section">
+        <!-- 学号（只读，不可修改） -->
+        <div class="search-box">
+            <label style="font-size: 2rem">学号</label>
+            <input type="text" class="search-input" value="{{ student.student_id }}" readonly disabled>
+        </div>
+        <!-- 姓名 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">姓名 *</label>
+            <input type="text" name="title" class="search-input" value="{{ student.name }}" required>
+        </div>
+        <!-- 密码（可选修改） -->
+         <div class="search-box"> 
+            <label style="font-size: 2rem">密码</label>
+            <input name="password" class="search-input" type="password" placeholder="新密码（留空则不修改）"
+                id="password">
+            <input name="confirm_password" class="search-input"  type="password" placeholder="确认新密码"
+                id="confirm_password">
+            <small class="error-msg" id="confirm_error"></small>
+        </div>
+        
+        <!-- 手机号 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">手机号</label>
+            <input name="phone" class="search-input" type="text" placeholder="手机号"
+               id="phone" value="{{ student.phone or '' }}">
+        </div>
+                    <!-- 邮箱 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">邮箱</label>
+            <input name="email" class="search-input" type="text" placeholder="邮箱"
+               id="email" value="{{ student.email or '' }}">
+        </div>
+
+        <!-- 当前头像 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">当前头像</label>
+            <div>
+                <img src="{{ url_for('static', filename=student.image or 'doc/image/default.png') }}" 
+                     class="cover-image" alt="封面">
+            </div>
+        </div>
+
+        <!-- 上传新头像 -->
+        <div class="search-box">
+            <label style="font-size: 2rem">更换头像</label>
+            <input type="file" name="image" class="search-input" accept="image/png,image/jpeg,image/jpg,image/gif">
+            <small>支持 PNG、JPG、JPEG、GIF 格式</small>
+        </div>
+
+        <div>
+            <button type="submit" class="btn">保存修改</button>
+            {% if session.user_type == 'admin' %}
+                <a href="{{ url_for('admin_students') }}" class="btn">取消</a>
+            {% else %}
+                <a href="{{ url_for('student_dashboard') }}" class="btn">取消</a>
+            {% endif %}
+        </div>
+    </form>
 </div>
 
 <script>
@@ -48,17 +79,6 @@ function validateForm() {
     const password = document.getElementById('password').value;
     const confirm = document.getElementById('confirm_password').value;
 
-    // 姓名验证（至少2个字符）
-    const name = document.getElementById('name').value;
-    if (!name) {
-        showError('name', '请输入姓名');
-        isValid = false;
-    } else if (name.length < 2) {
-        showError('name', '姓名至少2个字符');
-        isValid = false;
-    } else {
-        hideError('name');
-    }
 
     // 如果填写了密码，才进行密码验证
     if (password || confirm) {

@@ -73,8 +73,8 @@ INSERT INTO `overdue_record` (`borrow_id`, `paid_status`) VALUES
 (5, FALSE);   -- 对应 record_id=5 的逾期
 
 -- 插入预定记录示例
-INSERT INTO `reservation_record` (`student_id`, `book_id`, `reserve_date`, `expire_date`, `status`) VALUES
-('2021004', 'B007', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), '等待中'),
-('2021002', 'B002', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), '等待中'),
-('2021001', 'B010', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), '等待中');
+INSERT INTO `reservation_record` (`student_id`, `book_id`, `reserve_date`, `status`) VALUES
+('2021004', 'B007', CURDATE(), '等待中'),
+('2021002', 'B002', CURDATE(), '等待中'),
+('2021001', 'B010', CURDATE(), '等待中');
 

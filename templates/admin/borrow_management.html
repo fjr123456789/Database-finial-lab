@@ -33,6 +33,7 @@
                 <th>应还日期</th>
                 <th>归还日期</th>
                 <th>状态</th>
+                <th>操作</th>
             </tr>
         </thead>
         <tbody>
@@ -48,14 +49,18 @@
                         <td>{{ borrow.return_date or '未归还' }}</td>
                         <td>
                             {% if borrow.status == '借出' %}
-                                <span class="status-borrowed">借出</span>
+                                <span class="status">借出</span>
                             {% elif borrow.status == '已还' %}
-                                <span class="status-returned">已还</span>
+                                <span class="status">已还</span>
                             {% elif borrow.status == '逾期' %}
-                                <span class="status-overdue">逾期</span>
+                                <span class="status">逾期</span>
                             {% else %}
                                 <span class="status-other">{{ borrow.status }}</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('return_book', record_id=borrow.record_id, next='admin_borrows') }}"
+                               onclick="return confirm('确认归还？')">归还</a>
                         </td>
                     </tr>
                 {% endfor %}
@@ -69,17 +74,17 @@
 </div>
 
 <!-- 分页导航 -->
-{% if pages and pages|int > 1 %}
+{% if pages > 1 %}
 <div class="pagination">
     <div class="pagination-inner">
-        {% if page|int > 1 %}
-            <a href="{{ url_for('admin_borrows', search=search, status=status, page=page|int - 1) }}" class="page-btn">« 上一页</a>
+        {% if page > 1 %}
+            <a href="{{ url_for('admin_borrows', search=search, status=status, page=(page|int) - 1) }}" class="btn">« 上一页</a>
         {% endif %}
 
-        <span class="page-info">第 {{ page|default(1) }} / {{ pages }} 页</span>
+        <span class="page-info">第 {{ page }} / {{ pages }} 页</span>
 
-        {% if page|int < pages|int %}
-            <a href="{{ url_for('admin_borrows', search=search, status=status, page=page|int + 1) }}" class="page-btn">下一页 »</a>
+        {% if page < pages %}
+            <a href="{{ url_for('admin_borrows', search=search, status=status, page=(page|int) + 1) }}" class="btn">下一页 »</a>
         {% endif %}
     </div>
 </div>

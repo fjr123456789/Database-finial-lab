@@ -54,6 +54,7 @@
             <thead>
                 <tr>
                     <th>书名</th>
+                    <th>借阅日期</th>
                     <th>应还日期</th>
                     <th>状态</th>
                     <th>操作</th>
@@ -63,6 +64,7 @@
                 {% for borrow in current_borrows %}
                     <tr>
                         <td>{{ borrow.book.title }}</td>
+                        <td>{{ borrow.borrow_time }}</td>
                         <td>{{ borrow.due_date }}</td>
                         <td>
                             {% if borrow.due_date < now().date() %}
@@ -74,7 +76,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{{ url_for('return_book', record_id=borrow.record_id) }}"
+                            <a href="{{ url_for('return_book', record_id=borrow.record_id, next='admin_dashboard') }}"
                                onclick="return confirm('确认归还？')">归还</a>
                         </td>
                     </tr>
@@ -86,43 +88,4 @@
     {% endif %}
 </div>
 
-<div class="section">
-    <h5>当前逾期 <span>({{ active_borrows }} 本)</span></h5>
-
-    {% if current_borrows %}
-        <table class="book-table">
-            <thead>
-                <tr>
-                    <th>书名</th>
-                    <th>应还日期</th>
-                    <th>状态</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for borrow in current_borrows %}
-                    <tr>
-                        <td>{{ borrow.book.title }}</td>
-                        <td>{{ borrow.due_date }}</td>
-                        <td>
-                            {% if borrow.due_date < now().date() %}
-                                 <span style="color: red;">逾期</span>
-                            {% elif borrow.due_date <= now().date() + timedelta(days=3) %}
-                                <span style="color: orange;">即将到期</span>
-                            {% else %}
-                                正常
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('return_book', record_id=borrow.record_id) }}"
-                               onclick="return confirm('确认归还？')">归还</a>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p style="font-size: 1.3rem">暂无借阅记录</p>
-    {% endif %}
-</div>
 {% endblock %}

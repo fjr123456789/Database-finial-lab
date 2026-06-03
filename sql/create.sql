@@ -24,7 +24,7 @@ CREATE TABLE `student` (
     `password` VARCHAR(100) NOT NULL COMMENT '密码',
     `phone` VARCHAR(20) DEFAULT NULL COMMENT '手机号',
     `email` VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
-    `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像路径'-- ,
+    `image` VARCHAR(255) DEFAULT 'doc/image/default.png' COMMENT '头像路径'-- ,
    --  INDEX `idx_name` (`name`),
 --     INDEX `idx_phone` (`phone`)
 ) ;-- ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学生表';
@@ -51,7 +51,8 @@ CREATE TABLE `book` (
     -- `category` VARCHAR(50) DEFAULT NULL COMMENT '分类',
     `total_count` INT DEFAULT 1 COMMENT '总数量',
     `available_count` INT DEFAULT 1 COMMENT '可借数量',
-    `cover_image` VARCHAR(255) DEFAULT NULL COMMENT '封面图片'-- ,
+    `content` VARCHAR(255) DEFAULT NULL COMMENT '内容路径',
+    `cover_image` VARCHAR(255) DEFAULT 'doc/image/default.png' COMMENT '封面图片'-- ,
     -- `description` TEXT DEFAULT NULL COMMENT '图书简介',
     -- `location` VARCHAR(50) DEFAULT NULL COMMENT '存放位置',
    --  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
@@ -90,7 +91,7 @@ CREATE TABLE `reservation_record` (
     `student_id` VARCHAR(20) NOT NULL COMMENT '学号',
     `book_id` VARCHAR(20) NOT NULL COMMENT '图书编号',
     `reserve_date` DATE NOT NULL COMMENT '预定日期',
-    `expire_date` DATE DEFAULT NULL COMMENT '过期日期',
+--     `expire_date` DATE DEFAULT NULL COMMENT '过期日期',
     `status` ENUM('等待中', '已取书', '已取消') DEFAULT '等待中' COMMENT '状态',
     -- `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`student_id`) REFERENCES `student`(`student_id`)  ON DELETE CASCADE,
@@ -132,5 +133,6 @@ BEGIN
     WHERE `book_id` = NEW.`book_id`;
 END//
 DELIMITER ;
+
 
 

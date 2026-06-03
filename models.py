@@ -14,7 +14,7 @@ class Student(db.Model):
     password = db.Column(db.String(100), nullable=False)
     phone = db.Column(db.String(20))
     email = db.Column(db.String(100))
-    avatar = db.Column(db.String(255))
+    image = db.Column(db.String(255), default='static/doc/image/default.png')
     # created_at = db.Column(db.DateTime, default=datetime.now)
 
     # 关系
@@ -54,10 +54,8 @@ class Book(db.Model):
     publisher = db.Column(db.String(100))
     total_count = db.Column(db.Integer, default=1)
     available_count = db.Column(db.Integer, default=1)
-    cover_image = db.Column(db.String(255))
-    # description = db.Column(db.Text)
-    # location = db.Column(db.String(50))
-    # created_at = db.Column(db.DateTime, default=datetime.now)
+    cover_image = db.Column(db.String(255), default='static/doc/image/default.png')
+    content = db.Column(db.String(255))
 
     def is_available(self):
         return self.available_count > 0
@@ -74,10 +72,7 @@ class BorrowRecord(db.Model):
     student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'))
     book_id = db.Column(db.String(20), db.ForeignKey('book.book_id'))
     borrow_date = db.Column(db.Date, nullable=False)
-    # due_date = db.Column(db.Date, nullable=False)
     return_date = db.Column(db.Date)
-    # status = db.Column(db.String(20), default='借出')
-    # created_at = db.Column(db.DateTime, default=datetime.now)
     @property
     def due_date(self):
         """动态计算应还日期（假设借期30天）"""
@@ -107,9 +102,7 @@ class ReservationRecord(db.Model):
     student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'))
     book_id = db.Column(db.String(20), db.ForeignKey('book.book_id'))
     reserve_date = db.Column(db.Date, nullable=False)
-    expire_date = db.Column(db.Date)
     status = db.Column(db.String(20), default='等待中')
-    # created_at = db.Column(db.DateTime, default=datetime.now)
 
     book = db.relationship('Book', backref='reservations')
 

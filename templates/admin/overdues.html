@@ -38,6 +38,7 @@
                 <th>逾期天数</th>
                 <th>罚款金额</th>
                 <th>归还期限</th>
+                <th>还书日期</th>
                 <th>缴纳状态</th>
                 <th>缴纳日期</th>
                 <th>操作</th>
@@ -54,6 +55,7 @@
                         <td>{{ overdue.overdue_days }}天</td>
                         <td>¥{{ "%.2f"|format(overdue.fine_amount) }}</td>
                         <td>{{ overdue.due_date if overdue.due_date else '-' }}</td>
+                        <td>{{ overdue.return_date if overdue.return_date else '-' }}</td>
                         <td>
                             {% if overdue.paid_status %}
                                 <span>已缴纳</span>

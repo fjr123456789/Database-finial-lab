@@ -30,7 +30,6 @@
                 <th>书名</th>
                 <th>图书编号</th>
                 <th>预约日期</th>
-                <th>过期日期</th>
                 <th>状态</th>
                 <th>操作</th>
             </tr>
@@ -45,14 +44,9 @@
                     <td>{{ reserve.book.title if reserve.book else '-' }}</td>
                     <td>{{ reserve.book_id }}</td>
                     <td>{{ reserve.reserve_date }}</td>
-                    <td>{{ reserve.expire_date or '-' }}</td>
                     <td>
                         {% if reserve.status == '等待中' %}
-                            {% if reserve.expire_date and reserve.expire_date < now().date() %}
-                                <span>已过期</span>
-                            {% else %}
-                                <span>等待中</span>
-                            {% endif %}
+                            <span>等待中</span>
                         {% elif reserve.status == '已取书' %}
                             <span>已取书</span>
                         {% elif reserve.status == '已取消' %}

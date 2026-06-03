@@ -2,7 +2,11 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from datetime import datetime, timedelta, date
 from flask_sqlalchemy import SQLAlchemy
 import config
-from flask_apscheduler import APScheduler  # 新增
+from flask_apscheduler import APScheduler
+from werkzeug.utils import secure_filename
+import os
+from config import UPLOAD_FOLDER, MAX_CONTENT_LENGTH, ALLOWED_EXTENSIONS
+
 from sqlalchemy import text, MetaData, create_engine, func
 from sqlalchemy.orm import DeclarativeBase
 from models import db, Student, Admin, Book, BorrowRecord, ReservationRecord, OverdueRecordView, OverdueRecord
@@ -41,6 +45,15 @@ scheduler.add_job(
 # 启动定时任务
 scheduler.init_app(app)
 scheduler.start()
+
+# 确保上传目录存在
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 
 # 注入模板变量
 @app.context_processor
@@ -140,7 +153,7 @@ def student_dashboard():
         BorrowRecord.return_date.is_(None)
     ).all()
 
-
+    student = Student.query.filter_by(student_id=student_id).first()
     # 当前逾期（未归还且超过应还日期）
     overdue_borrows = []
     for borrow in current_borrows:
@@ -172,6 +185,7 @@ def student_dashboard():
     total_fine = float(result[0]) if result else 0
 
     return render_template('student/dashboard.html',
+                           student = student,
                            current_borrows=current_borrows,
                            borrow_history=borrow_history,
                            reservations=reservations,
@@ -312,7 +326,7 @@ def borrow_book(book_id):
             flash(f'成功借阅《{book.title}》', 'success')
 
         db.session.commit()
-        
+
     except Exception as e:
         db.session.rollback()
         flash(f'借书失败：{str(e)}', 'danger')
@@ -322,9 +336,12 @@ def borrow_book(book_id):
 # ==================== 还书（调用存储过程）====================
 @app.route('/student/return/<int:record_id>')
 def return_book(record_id):
-    if session.get('user_type') != 'student':
+    user_type = session.get('user_type')
+    if user_type not in ['student', 'admin']:
         return redirect(url_for('index'))
 
+    # 获取来源页面参数，用于结束时重定向
+    next_page = request.args.get('next', 'student_dashboard')
     try:
         # 获取原生数据库连接
         connection = db.engine.raw_connection()
@@ -356,7 +373,7 @@ def return_book(record_id):
     except Exception as e:
         flash(f'还书失败：{str(e)}', 'danger')
 
-    return redirect(url_for('student_dashboard'))
+    return redirect(url_for(next_page))
 
 # ==================== 预定图书（ORM方式）====================
 @app.route('/student/reserve/<book_id>')
@@ -372,7 +389,7 @@ def reserve_book(book_id):
     ).first()
 
     if existing:
-        flash('您已预定过该书', 'info')
+        flash('您已预定过该书', 'warning')
         return redirect(url_for('student_books'))
 
     book = Book.query.get(book_id)
@@ -481,7 +498,7 @@ def admin_dashboard():
     # 当前借阅：return_date 为空的记录
     active_borrows = BorrowRecord.query.filter(
         BorrowRecord.return_date.is_(None)
-    ).count()
+    ).all()
 
     # 逾期数量：使用原生 SQL
     today = date.today()
@@ -499,7 +516,8 @@ def admin_dashboard():
     return render_template('admin/dashboard.html',
                            total_books=total_books,
                            total_students=total_students,
-                           active_borrows=active_borrows,
+                           active_borrows=len(active_borrows),
+                           current_borrows=active_borrows,
                            overdue_count=overdue_count)
 
 
@@ -565,6 +583,65 @@ def delete_book(book_id):
     return redirect(url_for('admin_books'))
 
 
+
+# 修改图书信息
+@app.route('/admin/book/edit/<book_id>', methods=['GET', 'POST'])
+def edit_book(book_id):
+    if session.get('user_type') != 'admin':
+        return redirect(url_for('index'))
+
+    book = Book.query.get(book_id)
+    if not book:
+        flash('图书不存在', 'danger')
+        return redirect(url_for('admin_books'))
+
+    if request.method == 'POST':
+        # 获取表单数据
+        title = request.form.get('title')
+        author = request.form.get('author')
+        publisher = request.form.get('publisher')
+        total_count = request.form.get('total_count')
+
+        # 更新基本信息
+        if title:
+            book.title = title
+        if author:
+            book.author = author
+        if publisher:
+            book.publisher = publisher
+        if total_count:
+            new_total = int(total_count)
+            # 如果总数量变化，调整可借数量
+            diff = new_total - book.total_count
+            book.total_count = new_total
+            book.available_count += diff
+            if book.available_count < 0:
+                book.available_count = 0
+
+        # 处理封面上传
+        if 'cover_image' in request.files:
+            file = request.files['cover_image']
+            if file and file.filename and allowed_file(file.filename):
+                # 生成安全文件名
+                filename = secure_filename(f"{book_id}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                # 存储相对路径
+                book.cover_image = f'uploads/covers/{filename}'
+                flash('封面更新成功', 'success')
+            elif file and file.filename:
+                flash('不支持的文件格式，请上传 PNG、JPG、JPEG 或 GIF', 'danger')
+
+        try:
+            db.session.commit()
+            flash(f'图书《{book.title}》信息修改成功', 'success')
+            return redirect(url_for('admin_books'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'修改失败：{str(e)}', 'danger')
+
+    return render_template('admin/edit_book.html', book=book)
+
 # ==================== 学生管理（ORM方式）====================
 @app.route('/admin/students')
 def admin_students():
@@ -628,8 +705,14 @@ def delete_student(student_id):
 # ==================== 学生信息修改 ====================
 @app.route('/admin/student/edit/<student_id>', methods=['GET', 'POST'])
 def edit_student(student_id):
-    if session.get('user_type') != 'admin':
+    user_type = session.get('user_type')
+    if user_type not in ['student', 'admin']:
         return redirect(url_for('index'))
+
+    if user_type == 'student':
+        next_page = 'student_dashboard'
+    else:
+        next_page = 'admin_students'
 
     student = Student.query.get(student_id)
     if not student:
@@ -653,10 +736,24 @@ def edit_student(student_id):
         if password:
             student.password = password  # 实际应用中应该加密
 
+        # 处理头像上传
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename and allowed_file(file.filename):
+                # 生成安全文件名
+                filename = secure_filename(f"{student_id}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER_IMAGE'], filename)
+                file.save(filepath)
+                # 存储相对路径
+                student.image = f'uploads/image/{filename}'
+                flash('头像更新成功', 'success')
+            elif file and file.filename:
+                flash('不支持的文件格式，请上传 PNG、JPG、JPEG 或 GIF', 'danger')
+
         try:
             db.session.commit()
             flash(f'学生 {student.name} 信息修改成功', 'success')
-            return redirect(url_for('admin_students'))
+            return redirect(url_for(next_page))
         except Exception as e:
             db.session.rollback()
             flash(f'修改失败：{str(e)}', 'danger')
@@ -802,7 +899,11 @@ def mark_paid(overdue_id):
         return redirect(url_for('admin_overdues'))
 
     if overdue.paid_status:
-        flash('该罚款已缴纳', 'info')
+        flash('该罚款已缴纳', 'warning')
+        return redirect(url_for('admin_overdues'))
+
+    if not overdue.return_date:
+        flash('尚未还书', 'warning')
         return redirect(url_for('admin_overdues'))
 
     try:
@@ -821,7 +922,7 @@ def mark_paid(overdue_id):
 @app.route('/logout')
 def logout():
     session.clear()
-    flash('已退出登录', 'info')
+    flash('已退出登录', 'warning')
     return redirect(url_for('index'))
 
 
