@@ -17,7 +17,6 @@ class Student(db.Model):
     image = db.Column(db.String(255), default='doc/image/default.png')
 
     # 关系
-    borrow_records = db.relationship('BorrowRecord', backref='student', lazy='dynamic')
     reservations = db.relationship('ReservationRecord', backref='student', lazy='dynamic')
 
     def get_id(self):
@@ -71,20 +70,6 @@ class BorrowRecord(db.Model):
     book_id = db.Column(db.String(20), db.ForeignKey('book.book_id'))
     borrow_date = db.Column(db.Date, nullable=False)
     return_date = db.Column(db.Date)
-    @property
-    def due_date(self):
-        """动态计算应还日期（假设借期30天）"""
-        return self.borrow_date + timedelta(days=30)
-
-    @property
-    def status(self):
-        """动态计算状态"""
-        if self.return_date:
-            return '已还'
-        elif self.due_date < datetime.now().date():
-            return '逾期'
-        else:
-            return '借阅中'
 
     book = db.relationship('Book', backref='borrow_records')
 
@@ -146,4 +131,23 @@ class OverdueRecordView(db.Model):
 
     def __repr__(self):
         return f'<OverdueRecordView {self.overdue_id}>'
+
+
+class BorrowRecordView(db.Model):
+    """借阅记录视图（只读）"""
+    __tablename__ = 'borrow_record_view'
+    __table_args__ = {'extend_existing': True, 'info': {'is_view': True}}
+
+    record_id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String(20))
+    student_name = db.Column(db.String(50))
+    book_id = db.Column(db.String(20))
+    book_title = db.Column(db.String(200))
+    borrow_date = db.Column(db.Date)
+    return_date = db.Column(db.Date)
+    due_date = db.Column(db.Date)  # 计算字段
+    status = db.Column(db.String(10))  # 计算字段
+
+    def __repr__(self):
+        return f'<BorrowRecordView {self.record_id}>'
 

@@ -1,7 +1,7 @@
 USE `finial_lab`;
 
 -- =====================================================
--- 函数1：计算指定借阅记录的逾期天数
+-- 函数：计算指定借阅记录的逾期天数
 -- =====================================================
 DROP FUNCTION IF EXISTS `CalculateOverdueDays`;
 DELIMITER //
@@ -34,7 +34,7 @@ DELIMITER ;
 
 
 -- =====================================================
--- 函数2：计算指定借阅记录的逾期罚款金额
+-- 函数：计算指定借阅记录的逾期罚款金额
 -- =====================================================
 DROP FUNCTION IF EXISTS `CalculateFineAmount`;
 DELIMITER //
@@ -48,14 +48,14 @@ BEGIN
     
     SET v_overdue_days = CalculateOverdueDays(p_borrow_id);
     
-    RETURN v_overdue_days * 0.5;
+    RETURN v_overdue_days * 0.1;
 END//
 
 DELIMITER ;
 
 
 -- =====================================================
--- 函数3：查询学生总罚款（从逾期记录表计算）
+-- 函数：查询学生总罚款（从逾期记录表计算）
 -- =====================================================
 DROP FUNCTION IF EXISTS `GetStudentTotalFine`;
 DELIMITER //
@@ -67,10 +67,11 @@ READS SQL DATA
 BEGIN
     DECLARE total DECIMAL(10,2);
     
-    SELECT IFNULL(SUM(CalculateFineAmount(o.borrow_id)), 0) INTO total
-    FROM overdue_record o
-    JOIN borrow_record b ON o.borrow_id = b.record_id
-    WHERE b.student_id = p_student_id AND o.paid_status = FALSE;
+	SELECT IFNULL(SUM(CalculateFineAmount(o.borrow_id)), 0) INTO total
+	FROM overdue_record o, borrow_record b
+	WHERE o.borrow_id = b.record_id
+	  AND b.student_id = p_student_id 
+	  AND o.paid_status = FALSE;
     
     RETURN total;
 END//
@@ -78,34 +79,6 @@ END//
 DELIMITER ;
 
 
--- =====================================================
--- 函数4：查询学生的逾期记录列表
--- =====================================================
-DROP FUNCTION IF EXISTS `GetStudentOverdueInfo`;
-DELIMITER //
-
-CREATE FUNCTION `GetStudentOverdueInfo`(p_borrow_id INT)
-RETURNS VARCHAR(200)
-DETERMINISTIC
-READS SQL DATA
-BEGIN
-    DECLARE v_overdue_days INT;
-    DECLARE v_fine DECIMAL(10,2);
-    DECLARE v_result VARCHAR(200);
-    
-    SET v_overdue_days = CalculateOverdueDays(p_borrow_id);
-    SET v_fine = CalculateFineAmount(p_borrow_id);
-    
-    IF v_overdue_days > 0 THEN
-        SET v_result = CONCAT('逾期', v_overdue_days, '天，罚款', v_fine, '元');
-    ELSE
-        SET v_result = '无逾期';
-    END IF;
-    
-    RETURN v_result;
-END//
-
-DELIMITER ;
 -- 创建逾期记录视图（包含计算字段）
 DROP VIEW IF EXISTS `overdue_record_view`;
 CREATE VIEW `overdue_record_view` AS
@@ -123,15 +96,48 @@ SELECT
     DATE_ADD(b.borrow_date, INTERVAL 30 DAY) AS due_date,
     CalculateOverdueDays(b.record_id) AS overdue_days,
     CalculateFineAmount(b.record_id) AS fine_amount
-FROM overdue_record o
-JOIN borrow_record b ON o.borrow_id = b.record_id
-JOIN student s ON b.student_id = s.student_id
-JOIN book bk ON b.book_id = bk.book_id;
+FROM 
+    overdue_record o,
+    borrow_record b,
+    student s,
+    book bk
+WHERE 
+    o.borrow_id = b.record_id
+    AND b.student_id = s.student_id
+    AND b.book_id = bk.book_id;
 
 
 -- =====================================================
--- 8. 存储过程：还书处理（带事务控制和错误处理）
--- 不使用 status 字段，通过 return_date 判断是否已还
+-- 借阅记录视图
+-- =====================================================
+DROP VIEW IF EXISTS `borrow_record_view`;
+CREATE VIEW `borrow_record_view` AS
+SELECT 
+    br.record_id,
+    br.student_id,
+    s.name AS student_name,
+    br.book_id,
+    bk.title AS book_title,
+    br.borrow_date,
+    br.return_date,
+    -- 计算应还日期（借书日期 + 30天）
+    DATE_ADD(br.borrow_date, INTERVAL 30 DAY) AS due_date,
+    -- 计算状态
+    CASE 
+        WHEN br.return_date IS NOT NULL THEN '已还'
+        WHEN DATE_ADD(br.borrow_date, INTERVAL 30 DAY) < CURDATE() THEN '逾期'
+        ELSE '借阅中'
+    END AS status
+FROM 
+    borrow_record br,
+    student s,
+    book bk
+WHERE 
+    br.student_id = s.student_id
+    AND br.book_id = bk.book_id;
+
+-- =====================================================
+-- 存储过程：还书处理
 -- =====================================================
 DROP PROCEDURE IF EXISTS `ReturnBook`;
 DELIMITER //
@@ -151,7 +157,6 @@ BEGIN
     DECLARE v_fine DECIMAL(10,2);
     DECLARE v_record_exists INT;
     DECLARE v_today DATE;
-    DECLARE v_book_exists INT;
     
     -- 错误处理
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -192,16 +197,16 @@ BEGIN
             SET return_date = v_today
             WHERE record_id = p_record_id;
             
-            -- 4. 更新图书可借数量
-            UPDATE book SET available_count = available_count + 1
-            WHERE book_id = v_book_id;
+--             -- 4. 更新图书可借数量
+--             UPDATE book SET available_count = available_count + 1
+--             WHERE book_id = v_book_id;
             
             -- 5. 计算应还日期和逾期罚款
             SET v_due_date = DATE_ADD(v_borrow_date, INTERVAL 30 DAY);
             
             IF v_today > v_due_date THEN
                SET v_overdue_days = DATEDIFF(v_today, v_due_date);
-               SET v_fine = v_overdue_days * 0.5; 
+               SET v_fine = v_overdue_days * 0.1; 
                 
                 SET p_message = CONCAT('还书成功，逾期', v_overdue_days, '天，罚款', v_fine, '元');
             ELSE
@@ -233,7 +238,6 @@ BEGIN
     DECLARE v_book_title VARCHAR(200);
     DECLARE v_today DATE;
     DECLARE v_has_reservation INT;    -- 是否有预约
-    DECLARE v_book_status INT;        -- 图书状态
     
     DECLARE s INT DEFAULT 0;
     DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET s = 1;
@@ -318,9 +322,11 @@ BEGIN
         INSERT INTO borrow_record (student_id, book_id, borrow_date, return_date)
         VALUES (p_student_id, p_book_id, v_today, NULL);
         
+-- 		UPDATE book SET available_count = available_count - 1
+-- 		WHERE book_id = book_id;
         
-        -- 如果当前读者有预约，删除该预约记录
-        DELETE FROM reservation_record 
+        -- 如果当前读者有预约，更新该预约记录
+        UPDATE reservation_record SET status = '已取书'
         WHERE student_id = p_student_id 
           AND book_id = p_book_id 
           AND status = '等待中';

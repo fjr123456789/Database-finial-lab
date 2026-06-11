@@ -53,7 +53,10 @@
         <table class="book-table">
             <thead>
                 <tr>
+                    <th>图书编号</th>
                     <th>书名</th>
+                    <th>学号</th>
+                    <th>借书人</th>
                     <th>借阅日期</th>
                     <th>应还日期</th>
                     <th>状态</th>
@@ -63,8 +66,11 @@
             <tbody>
                 {% for borrow in current_borrows %}
                     <tr>
-                        <td>{{ borrow.book.title }}</td>
-                        <td>{{ borrow.borrow_time }}</td>
+                        <td>{{ borrow.book_id }}</td>
+                        <td>{{ borrow.book_title }}</td>
+                        <td>{{ borrow.student_id }}</td>
+                        <td>{{ borrow.student_name }}</td>
+                        <td>{{ borrow.borrow_date }}</td>
                         <td>{{ borrow.due_date }}</td>
                         <td>
                             {% if borrow.due_date < now().date() %}

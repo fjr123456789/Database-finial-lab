@@ -20,7 +20,7 @@
     <div class="right">
         <div>
             <img src="{{ url_for('static', filename=student.image or 'doc/image/default.png') }}"
-                 class="cover-image" alt="封面">
+                 class="student-image" alt="封面">
         </div>
     </div>
 
@@ -63,7 +63,7 @@
             <tbody>
                 {% for borrow in current_borrows %}
                     <tr>
-                        <td>{{ borrow.book.title }}</td>
+                        <td>{{ borrow.book_title }}</td>
                         <td>{{ borrow.borrow_date }}</td>
                         <td>{{ borrow.due_date }}</td>
                         <td>
@@ -165,14 +165,22 @@
             <tbody>
                 {% for borrow in overdue_borrows %}
                     <tr>
-                        <td>{{ borrow.book.title if borrow.book else '-' }}</td>
+                        <td>{{ borrow.book_title if borrow.book_title else '-' }}</td>
                         <td>{{ borrow.borrow_date }}</td>
                         <td>{{ borrow.due_date }}</td>
                         <td>{{ borrow.overdue_days }}天</td>
                         <td>
-                            <a href="{{ url_for('return_book', record_id=borrow.record_id) }}"
-                               onclick="return confirm('确认归还？逾期将产生罚款')"
-                               style="color: red;">立即归还</a>
+                            {% if borrow.return_date %}
+                                {% if borrow.paid_status == False %}
+                                    <span style="color: red;">请线下缴费</span>
+                                {% else %}
+                                    <span style="color: #999;">已缴费</span>
+                                {% endif %}
+                            {% else %}
+                                <a href="{{ url_for('return_book', record_id=borrow.borrow_id) }}"
+                                   onclick="return confirm('确认归还？逾期将产生罚款')"
+                                   style="color: red;">立即归还</a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}

@@ -1,5 +1,5 @@
 -- =====================================================
--- 12. 插入初始数据
+-- 插入初始数据
 -- =====================================================
 USE `finial_lab`;
 
@@ -44,16 +44,16 @@ INSERT INTO `book` (`book_id`, `title`, `author`, `publisher`, `total_count`, `a
 ('B006', '生命宇宙以及一切', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
 ('B007', '再见,谢谢鱼', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
 ('B008', '基本上无害', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
-('B009', '宇宙尽头的餐馆', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
-('B010', '宇宙尽头的餐馆', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
-('B011', '宇宙尽头的餐馆', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png','');
+('B009', '宇宙尽头的餐馆2', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
+('B010', '宇宙尽头的餐馆3', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png',''),
+('B011', '宇宙尽头的餐馆4', '道格拉斯·亚当斯', '四川科学技术出版社', 2, 2, 'doc/image/default.png','');
 
 -- 插入借阅记录示例
 -- 当前借阅（未逾期）
-INSERT INTO `borrow_record` (`student_id`, `book_id`, `borrow_date`, `return_date`) VALUES
-('001', 'B001', DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_ADD(CURDATE(), INTERVAL 20 DAY)),
-('002', 'B003', DATE_SUB(CURDATE(), INTERVAL 5 DAY), DATE_ADD(CURDATE(), INTERVAL 25 DAY)),
-('003', 'B004', DATE_SUB(CURDATE(), INTERVAL 3 DAY), DATE_ADD(CURDATE(), INTERVAL 27 DAY));
+INSERT INTO `borrow_record` (`student_id`, `book_id`, `borrow_date`) VALUES
+('001', 'B001', DATE_SUB(CURDATE(), INTERVAL 10 DAY)),
+('002', 'B003', DATE_SUB(CURDATE(), INTERVAL 5 DAY)),
+('003', 'B004', DATE_SUB(CURDATE(), INTERVAL 3 DAY));
 
 -- 逾期借阅（已逾期）
 INSERT INTO `borrow_record` (`student_id`, `book_id`, `borrow_date`) VALUES
@@ -64,7 +64,12 @@ INSERT INTO `borrow_record` (`student_id`, `book_id`, `borrow_date`) VALUES
 INSERT INTO `borrow_record` (`student_id`, `book_id`, `borrow_date`, `return_date`) VALUES
 ('003', 'B001', DATE_SUB(CURDATE(), INTERVAL 60 DAY), DATE_SUB(CURDATE(), INTERVAL 28 DAY)),
 ('001', 'B003', DATE_SUB(CURDATE(), INTERVAL 50 DAY), DATE_SUB(CURDATE(), INTERVAL 25 DAY)),
-('004', 'B006', DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY));
+('004', 'B006', DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY)),
+('004', 'B006', DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY)),
+('004', 'B004', DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY)),
+('004', 'B004', DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY)),
+('004', 'B004', DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY));
+
 
 -- 插入逾期罚款记录（对应上面的逾期借阅）
 INSERT INTO `overdue_record` (`borrow_id`, `paid_status`) VALUES

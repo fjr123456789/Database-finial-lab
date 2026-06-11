@@ -41,9 +41,9 @@
                 {% for borrow in borrows %}
                     <tr class="{% if borrow.status == '逾期' %}overdue-row{% elif borrow.status == '借出' %}borrowed-row{% endif %}">
                         <td>{{ borrow.record_id }}</td>
-                        <td>{{ borrow.student.name if borrow.student else '-' }}</td>
+                        <td>{{ borrow.student_name if borrow.student_name else '-' }}</td>
                         <td>{{ borrow.student_id }}</td>
-                        <td>{{ borrow.book.title if borrow.book else '-' }}</td>
+                        <td>{{ borrow.book_title if borrow.book_title else '-' }}</td>
                         <td>{{ borrow.borrow_date }}</td>
                         <td>{{ borrow.due_date }}</td>
                         <td>{{ borrow.return_date or '未归还' }}</td>

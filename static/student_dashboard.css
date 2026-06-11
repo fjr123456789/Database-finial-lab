@@ -140,3 +140,10 @@
     height: 100px;
     object-fit: cover;  /* 保持比例裁剪 */
 }
+
+.student-image {
+    width: 80px;
+    height: 100px;
+    object-fit: cover;  /* 保持比例裁剪 */
+    border-radius: 3rem;
+}

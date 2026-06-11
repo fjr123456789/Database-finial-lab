@@ -1,58 +1,27 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
-from datetime import datetime, timedelta, date
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from datetime import datetime, timedelta
 import config
-from flask_apscheduler import APScheduler
 from werkzeug.utils import secure_filename
 import os
-from config import UPLOAD_FOLDER, MAX_CONTENT_LENGTH, ALLOWED_EXTENSIONS, UPLOAD_FOLDER_CONTENT
+from config import UPLOAD_FOLDER, ALLOWED_EXTENSIONS, UPLOAD_FOLDER_CONTENT
 
 from sqlalchemy import text, MetaData, create_engine, func
-from sqlalchemy.orm import DeclarativeBase
-from models import db, Student, Admin, Book, BorrowRecord, ReservationRecord, OverdueRecordView, OverdueRecord
+from models import db, Student, Admin, Book, ReservationRecord, OverdueRecordView, BorrowRecordView, OverdueRecord
 
 app = Flask(__name__)
 # 连接配置
 app.config.from_object(config)
 
-# 定时任务配置
-scheduler = APScheduler()
 # 初始化数据库
 db.init_app(app)
-
-# 定时任务函数
-def daily_overdue_check():
-    """每天执行存储过程生成逾期记录"""
-    with app.app_context():
-        try:
-            # 调用存储过程
-            db.session.execute(text("CALL GenerateDailyOverdue()"))
-            db.session.commit()
-            print(f"[{datetime.now()}] 逾期记录已更新")
-        except Exception as e:
-            db.session.rollback()
-            print(f"[{datetime.now()}] 更新逾期记录失败：{str(e)}")
-
-# 配置定时任务（每天凌晨0点执行）
-scheduler.add_job(
-    id='daily_overdue_check',
-    func=daily_overdue_check,
-    trigger='cron',
-    hour=0,
-    minute=0
-)
-
-# 启动定时任务
-scheduler.init_app(app)
-scheduler.start()
 
 # 确保上传目录存在
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
+# 检查文件拓展名
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 
 # 注入模板变量
@@ -63,11 +32,24 @@ def inject_now():
 # 创建跟路由，http://127.0.0.0:5000
 @app.route('/')
 def index():
-    books = Book.query.order_by(Book.book_id).all()  # 获取前6本图书
+    # 按借阅次数排序图书
+    results = db.session.query(
+        Book,
+        func.count(BorrowRecordView.record_id).label('borrow_count')
+    ).outerjoin(
+        BorrowRecordView, BorrowRecordView.book_id == Book.book_id
+    ).group_by(
+        Book.book_id
+    ).order_by(
+        func.count(BorrowRecordView.record_id).desc()
+    ).all()
+
+    # 提取 Book 对象
+    books = [book for book, count in results]
     return render_template('index.html', books=books)
 
 
-# ==================== 学生注册（ORM方式）====================
+# ==================== 学生注册 ====================
 @app.route('/student/register', methods=['GET', 'POST'])
 def student_register():
     if request.method == 'POST':
@@ -113,7 +95,7 @@ def student_register():
     return render_template('student/register.html')
 
 
-# ==================== 学生登录（ORM方式）====================
+# ==================== 学生登录 ====================
 @app.route('/student/login', methods=['GET', 'POST'])
 def student_login():
     if request.method == 'POST':
@@ -134,7 +116,7 @@ def student_login():
     return render_template('student/login.html')
 
 
-# ==================== 学生工作台（ORM方式）====================
+# ==================== 学生工作台 ====================
 
 @app.route('/student/dashboard')
 def student_dashboard():
@@ -149,41 +131,47 @@ def student_dashboard():
     today = date.today()
 
     # 当前借阅
-    current_borrows = BorrowRecord.query.filter(
-        BorrowRecord.student_id == student_id,
-        BorrowRecord.return_date.is_(None)
+    current_borrows = BorrowRecordView.query.filter(
+        BorrowRecordView.student_id == student_id,
+        BorrowRecordView.return_date.is_(None)
     ).all()
 
     student = Student.query.filter_by(student_id=student_id).first()
     # 当前逾期（未归还且超过应还日期）
-    overdue_borrows = []
-    for borrow in current_borrows:
-        if borrow.borrow_date + timedelta(days=30) < today:
-            # 添加逾期天数属性
-            borrow.overdue_days = (today - (borrow.borrow_date + timedelta(days=30))).days
-            overdue_borrows.append(borrow)
+    # overdue_borrows = []
+    # for borrow in current_borrows:
+    #     if borrow.status == '逾期':
+    #         # 添加逾期天数属性
+    #         borrow.overdue_days = (today - (borrow.borrow_date + timedelta(days=30))).days
+    #         overdue_borrows.append(borrow)
 
 
     # 历史借阅
-    borrow_history = BorrowRecord.query.filter(
-        BorrowRecord.student_id == student_id
-    ).order_by(BorrowRecord.borrow_date.desc()).all()
+    borrow_history = BorrowRecordView.query.filter(
+        BorrowRecordView.student_id == student_id
+    ).order_by(BorrowRecordView.borrow_date.desc()).all()
 
     # 最近十条预约记录
     reservations = ReservationRecord.query.filter_by(
-        student_id=student_id, status='等待中'
+        student_id=student_id
     ).order_by(ReservationRecord.reserve_id.desc()).limit(10).all()
 
+    # 历史逾期
     overdues = OverdueRecordView.query.filter(
         OverdueRecordView.student_id == student_id
     ).all()
 
-    # 总罚款
+    overdue_borrows = []
+    for borrow in overdues:
+        if not borrow.paid_status:
+            overdue_borrows.append(borrow)
+
+    # 调用 MySQL 函数 GetStudentTotalFine
     result = db.session.execute(
-        text("SELECT IFNULL(SUM(fine_amount), 0) FROM overdue_record_view WHERE student_id = :sid AND paid_status = FALSE"),
+        text("SELECT GetStudentTotalFine(:sid)"),
         {'sid': student_id}
     ).fetchone()
-    total_fine = float(result[0]) if result else 0
+    total_fine = float(result[0]) if result and result[0] is not None else 0
 
     return render_template('student/dashboard.html',
                            student = student,
@@ -311,14 +299,13 @@ def return_book(record_id):
     # 获取来源页面参数，用于结束时重定向
     next_page = request.args.get('next', 'student_dashboard')
     try:
-        # 获取原生数据库连
 
         # 使用 text() 调用存储过程
         result = db.session.execute(
             text("CALL ReturnBook(:record_id, @state, @message)"),
             {'record_id': record_id}
         )
-        # 获取 OUT 参数（第2和第3个参数）
+
         # 获取 OUT 参数
         result_state = db.session.execute(text("SELECT @state, @message")).fetchone()
 
@@ -374,7 +361,7 @@ def reserve_book(book_id):
     db.session.add(new_reserve)
     db.session.commit()
 
-    flash(f'成功预定《{book.title}》，请在7天内来馆取书', 'success')
+    flash(f'成功预定《{book.title}》', 'success')
     return redirect(url_for('student_books'))
 
 # 历史借阅
@@ -385,12 +372,12 @@ def student_borrow_history():
 
     student_id = session['user_id']
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    per_page = 10
 
-    # 已归还的借阅记录
-    query = BorrowRecord.query.filter(
-        BorrowRecord.student_id == student_id
-    ).order_by(BorrowRecord.borrow_date.desc())
+    # 借阅记录
+    query = BorrowRecordView.query.filter(
+        BorrowRecordView.student_id == student_id
+    ).order_by(BorrowRecordView.borrow_date.desc())
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
@@ -411,7 +398,7 @@ def student_overdue_history():
     page = request.args.get('page', 1, type=int)
     per_page = 10
 
-    # 逾期记录（通过 overdue_record 表关联）
+    # 逾期记录
     query = OverdueRecordView.query.filter(
         OverdueRecordView.student_id == student_id
     ).order_by(OverdueRecordView.overdue_id.desc())
@@ -447,7 +434,7 @@ def admin_login():
     return render_template('admin/login.html')
 
 
-# ==================== 管理员仪表盘 ====================
+# ==================== 管理员工作台 ====================
 from datetime import date
 from sqlalchemy import text
 
@@ -457,26 +444,18 @@ def admin_dashboard():
     if session.get('user_type') != 'admin':
         return redirect(url_for('index'))
 
+    db.session.execute(text("CALL GenerateDailyOverdue()"))
+
     total_books = Book.query.count()
     total_students = Student.query.count()
 
     # 当前借阅：return_date 为空的记录
-    active_borrows = BorrowRecord.query.filter(
-        BorrowRecord.return_date.is_(None)
+    active_borrows = BorrowRecordView.query.filter(
+        BorrowRecordView.return_date.is_(None)
     ).all()
 
-    # 逾期数量：使用原生 SQL
-    today = date.today()
-    result = db.session.execute(
-        text("""
-             SELECT COUNT(*)
-             FROM borrow_record
-             WHERE return_date IS NULL
-               AND DATE_ADD(borrow_date, INTERVAL 30 DAY) < :today
-             """),
-        {'today': today}
-    ).fetchone()
-    overdue_count = result[0] if result else 0
+    # 逾期数量
+    overdue_count = OverdueRecordView.query.filter(OverdueRecordView.return_date.is_(None)).count()
 
     return render_template('admin/dashboard.html',
                            total_books=total_books,
@@ -486,7 +465,7 @@ def admin_dashboard():
                            overdue_count=overdue_count)
 
 
-# ==================== 图书管理（ORM方式）====================
+# ==================== 图书管理 ====================
 @app.route('/admin/books')
 def admin_books():
     if session.get('user_type') != 'admin':
@@ -543,7 +522,7 @@ def delete_book(book_id):
             flash('图书已删除', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f'删除失败：{str(e)}', 'danger')
+            flash(f'删除失败', 'danger')
 
     return redirect(url_for('admin_books'))
 
@@ -592,8 +571,8 @@ def edit_book(book_id):
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
 
-                # 删除旧封面
-                if book.cover_image:
+                # 删除旧封面（不是默认封面才删除）
+                if book.cover_image and 'default.png' not in book.cover_image:
                     old_path = os.path.join('static', book.cover_image)
                     if os.path.exists(old_path):
                         os.remove(old_path)
@@ -604,7 +583,7 @@ def edit_book(book_id):
             elif file and file.filename:
                 flash('不支持的文件格式，请上传 PNG、JPG、JPEG 或 GIF', 'danger')
 
-        # ========== 处理电子书上传==========
+        # ========== 处理电子书上传 ==========
         if 'ebook_file' in request.files:
             ebook_file = request.files['ebook_file']
             if ebook_file and ebook_file.filename and ebook_file.filename.strip():
@@ -697,7 +676,7 @@ def delete_student(student_id):
             flash('学生已删除', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f'删除失败：', 'danger')
+            flash(f'删除失败', 'danger')
 
     return redirect(url_for('admin_students'))
 
@@ -734,7 +713,7 @@ def edit_student(student_id):
         if email:
             student.email = email
         if password:
-            student.password = password  # 实际应用中应该加密
+            student.password = password
 
         # 处理头像上传
         if 'image' in request.files:
@@ -746,7 +725,7 @@ def edit_student(student_id):
                 file.save(filepath)
 
                 # 删除旧头像
-                if student.image:
+                if student.image and 'default.png' not in student.image:
                     old_path = os.path.join('static', student.image)
                     if os.path.exists(old_path):
                         os.remove(old_path)
@@ -778,31 +757,29 @@ def admin_borrows():
     page = request.args.get('page', 1, type=int)
     per_page = 10
 
-    query = BorrowRecord.query
+    query = BorrowRecordView.query
 
     if search:
         query = query.filter(
             db.or_(
-                BorrowRecord.student.has(Student.name.contains(search)),
-                BorrowRecord.student_id.contains(search),
-                BorrowRecord.book.has(Book.title.contains(search))
+                BorrowRecordView.student_name.contains(search),
+                BorrowRecordView.student_id.contains(search),
+                BorrowRecordView.book_title.contains(search)
             )
         )
 
     # 按状态筛选（使用 return_date 判断）
     if status_filter:
         if status_filter == '借阅中':
-            query = query.filter(BorrowRecord.return_date.is_(None))
+            query = query.filter(BorrowRecordView.status == '借阅中')
         elif status_filter == '已还':
-            query = query.filter(BorrowRecord.return_date.is_not(None))
+            query = query.filter(BorrowRecordView.status == '已还')
         elif status_filter == '逾期':
             # 逾期：未归还 且 borrow_date + 30 < 今天
-            query = query.filter(
-                BorrowRecord.return_date.is_(None),
-                BorrowRecord.borrow_date + timedelta(days=30) < date.today()
-            )
+            query = query.filter(BorrowRecordView.status == '逾期')
+    # query = query.filter(BorrowRecordView.status == status_filter)
 
-    pagination = query.order_by(BorrowRecord.borrow_date.desc()).paginate(
+    pagination = query.order_by(BorrowRecordView.borrow_date.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
 
@@ -837,7 +814,7 @@ def admin_reservations():
                            total=pagination.total)
 
 
-# 删除预约记录（彻底删除）
+# 删除预约记录
 @app.route('/admin/delete_reservation/<int:reserve_id>')
 def delete_reservation(reserve_id):
     if session.get('user_type') != 'admin':
@@ -852,7 +829,7 @@ def delete_reservation(reserve_id):
         db.session.delete(reservation)
         db.session.commit()
         flash(
-            f'已删除预约记录）',
+            f'已删除预约记录',
             'success')
     except Exception as e:
         db.session.rollback()
@@ -866,6 +843,8 @@ def delete_reservation(reserve_id):
 def admin_overdues():
     if session.get('user_type') != 'admin':
         return redirect(url_for('index'))
+
+    db.session.execute(text("CALL GenerateDailyOverdue()"))
 
     paid_status = request.args.get('paid_status', '')
     page = request.args.get('page', 1, type=int)
